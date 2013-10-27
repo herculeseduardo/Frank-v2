@@ -240,6 +240,53 @@ window.Frank = window.Frank || {};
 		}
 	}
 
+	var up = function(p) {
+		if(!Frank.colideU()) {
+			move(-(Frank.speed),1);
+		}
+	}
+
+	var down = function(p) {
+		if(!Frank.colideD()) {
+			move(Frank.speed,1);
+		}
+	}
+
+	var left = function(p) {
+		if(!Frank.colideL()) {
+			move(-(Frank.speed),0);
+		}
+	}
+
+	var right = function(p) {
+		if(!Frank.colideR()) {
+			move(Frank.speed,0);
+		}
+	}
+
+	var myMove = function(e) {
+		if (Frank.drag) {
+			Frank.x = e.pageX - _canvas.offsetLeft - Frank.w/2;
+			Frank.y = e.pageY - _canvas.offsetTop - Frank.h/2;
+		}
+	}
+
+	var myDown = function(e) {
+		if (e.pageX < Frank.x + Frank.w + _canvas.offsetLeft && e.pageX > Frank.x - Frank.w +
+			_canvas.offsetLeft && e.pageY < Frank.y + Frank.h + _canvas.offsetTop &&
+			e.pageY > Frank.y - Frank.h + _canvas.offsetTop) {
+			Frank.x = e.pageX - _canvas.offsetLeft - Frank.w/2;
+			Frank.y = e.pageY - _canvas.offsetTop - Frank.h/2;
+			Frank.drag = true;
+			_canvas.onmousemove = myMove;
+		}
+	}
+
+	var myUp = function() {
+		Frank.drag = false;
+		_canvas.onmousemove = null;
+	}
+
 	Frank.add = function(_Obj) {
 		Frank.blocks.push(_Obj);
 		Frank.counter++;
@@ -430,53 +477,6 @@ window.Frank = window.Frank || {};
 		if(transportar) {
 			limitblocks();
 		}
-	}
-
-	var up = function(p) {
-		if(!Frank.colideU()) {
-			move(-(Frank.speed),1);
-		}
-	}
-
-	var down = function(p) {
-		if(!Frank.colideD()) {
-			move(Frank.speed,1);
-		}
-	}
-
-	var left = function(p) {
-		if(!Frank.colideL()) {
-			move(-(Frank.speed),0);
-		}
-	}
-
-	var right = function(p) {
-		if(!Frank.colideR()) {
-			move(Frank.speed,0);
-		}
-	}
-
-	var myMove = function(e) {
-		if (Frank.drag) {
-			Frank.x = e.pageX - _canvas.offsetLeft - Frank.w/2;
-			Frank.y = e.pageY - _canvas.offsetTop - Frank.h/2;
-		}
-	}
-
-	var myDown = function(e) {
-		if (e.pageX < Frank.x + Frank.w + _canvas.offsetLeft && e.pageX > Frank.x - Frank.w +
-			_canvas.offsetLeft && e.pageY < Frank.y + Frank.h + _canvas.offsetTop &&
-			e.pageY > Frank.y - Frank.h + _canvas.offsetTop) {
-			Frank.x = e.pageX - _canvas.offsetLeft - Frank.w/2;
-			Frank.y = e.pageY - _canvas.offsetTop - Frank.h/2;
-			Frank.drag = true;
-			_canvas.onmousemove = myMove;
-		}
-	}
-
-	var myUp = function() {
-		Frank.drag = false;
-		_canvas.onmousemove = null;
 	}
 
 	Frank.onkeydown = function(e) {};
