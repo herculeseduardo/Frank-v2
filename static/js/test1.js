@@ -5,7 +5,6 @@
 		hero = null,
 		tiro = null,
 		sizeBullet = null,
-		linux = new Image(),
 		background = null,
 		arrastarHeroi = true,
 		fimDeJogo = false,
