@@ -506,44 +506,45 @@ class Game {
 
   createEnemyBomb(x, y, color) {
     // Criar a bomba
-    const bombGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1, 8);
+    const bombGeometry = new THREE.CylinderGeometry(0.5, 0.5, 1.5, 8); // Aumentado o tamanho
     const bombMaterial = new THREE.MeshPhongMaterial({ 
-      color: 0x000000,
-      emissive: 0x000000,
-      emissiveIntensity: 0.5
+      color: color, // Usando a cor do inimigo
+      emissive: color,
+      emissiveIntensity: 0.8, // Aumentado o brilho
+      shininess: 100
     });
     const bomb = new THREE.Mesh(bombGeometry, bombMaterial);
     bomb.rotation.x = Math.PI / 2;
     bomb.position.set(x, y, 0);
-    bomb.velocity = new THREE.Vector3(0, -0.1, 0); // Aumentada a velocidade de queda
-    bomb.lifetime = 100; // Tempo de vida da bomba em frames
+    bomb.velocity = new THREE.Vector3(0, -0.08, 0); // Reduzida a velocidade de queda
+    bomb.lifetime = 200; // Aumentado o tempo de vida da bomba
 
     // Criar rastro de fogo
     const fireTrail = new THREE.Group();
-    const particleCount = 10;
-    const particleGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+    const particleCount = 20; // Aumentado número de partículas
+    const particleGeometry = new THREE.SphereGeometry(0.2, 8, 8); // Aumentado tamanho das partículas
     
     for (let i = 0; i < particleCount; i++) {
       const particleMaterial = new THREE.MeshPhongMaterial({
         color: 0xff6600,
         emissive: 0xff3300,
-        emissiveIntensity: 0.8,
+        emissiveIntensity: 1.0, // Aumentado o brilho
         transparent: true,
-        opacity: 0.8
+        opacity: 0.9
       });
       
       const particle = new THREE.Mesh(particleGeometry, particleMaterial);
       const angle = (i / particleCount) * Math.PI * 2;
-      const radius = 0.2 + Math.random() * 0.3;
+      const radius = 0.3 + Math.random() * 0.4; // Aumentado o raio
       particle.position.set(
         Math.cos(angle) * radius,
         -0.5 - (i * 0.2),
         Math.sin(angle) * radius
       );
       particle.velocity = new THREE.Vector3(
-        (Math.random() - 0.5) * 0.02,
+        (Math.random() - 0.5) * 0.03,
         -0.05,
-        (Math.random() - 0.5) * 0.02
+        (Math.random() - 0.5) * 0.03
       );
       fireTrail.add(particle);
     }
@@ -551,7 +552,7 @@ class Game {
     bomb.add(fireTrail);
     this.scene.add(bomb);
     this.enemyBombs.push(bomb);
-    this.playSound(this.sounds.enemyShoot, 0.3);
+    this.playSound(this.sounds.enemyShoot, 0.4); // Aumentado o volume do som
   }
 
   createBullet() {
@@ -687,7 +688,7 @@ class Game {
       // Atualizar partículas do fogo
       bomb.children[0].children.forEach(particle => {
         particle.position.add(particle.velocity);
-        particle.material.opacity = bomb.lifetime / 100;
+        particle.material.opacity = bomb.lifetime / 200; // Ajustado para o novo tempo de vida
       });
 
       // Remover bombas fora da tela ou com tempo expirado
