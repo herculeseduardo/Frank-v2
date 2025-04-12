@@ -472,18 +472,23 @@ class Game {
     const enemyType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
     
     // Criar grupo de 2 inimigos do mesmo tipo
-    const spacing = 15; // Aumentado o espaçamento
-    const startX = -spacing/2; // Centralizar o grupo
+    const screenWidth = window.innerWidth;
+    const gameWidth = this.gameArea.width;
+    const scale = gameWidth / screenWidth;
+    
+    // Calcular posições baseadas na largura da tela
+    const leftPosition = -gameWidth/4;
+    const rightPosition = gameWidth/4;
     
     for (let i = 0; i < 2; i++) {
       const enemyShip = enemyType.createGeometry();
       
       // Posicionar os inimigos em diferentes alturas
-      const heightOffset = (Math.random() - 0.5) * 5; // Variação de altura
+      const heightOffset = (Math.random() - 0.5) * 5;
       
       enemyShip.position.set(
-        startX + (i * spacing),
-        20 + heightOffset, // Adiciona variação na altura
+        i === 0 ? leftPosition : rightPosition,
+        20 + heightOffset,
         0
       );
 
@@ -499,29 +504,50 @@ class Game {
   }
 
   createEnemyBomb(x, y, color) {
+    // Criar a bomba
     const bombGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1, 8);
     const bombMaterial = new THREE.MeshPhongMaterial({ 
-      color: color,
-      emissive: color,
+      color: 0x000000,
+      emissive: 0x000000,
       emissiveIntensity: 0.5
     });
     const bomb = new THREE.Mesh(bombGeometry, bombMaterial);
-    bomb.rotation.x = Math.PI / 2; // Rotacionar para ficar na vertical
+    bomb.rotation.x = Math.PI / 2;
     bomb.position.set(x, y, 0);
-    bomb.velocity = new THREE.Vector3(0, -0.05, 0);
+    bomb.velocity = new THREE.Vector3(0, -0.1, 0); // Aumentada a velocidade de queda
+    bomb.lifetime = 100; // Tempo de vida da bomba em frames
 
-    // Adicionar rastro
-    const trailGeometry = new THREE.CylinderGeometry(0.1, 0.3, 2, 8);
-    const trailMaterial = new THREE.MeshPhongMaterial({
-      color: color,
-      transparent: true,
-      opacity: 0.5
-    });
-    const trail = new THREE.Mesh(trailGeometry, trailMaterial);
-    trail.rotation.x = Math.PI / 2;
-    trail.position.set(0, 1, 0);
-    bomb.add(trail);
-
+    // Criar rastro de fogo
+    const fireTrail = new THREE.Group();
+    const particleCount = 10;
+    const particleGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+    
+    for (let i = 0; i < particleCount; i++) {
+      const particleMaterial = new THREE.MeshPhongMaterial({
+        color: 0xff6600,
+        emissive: 0xff3300,
+        emissiveIntensity: 0.8,
+        transparent: true,
+        opacity: 0.8
+      });
+      
+      const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+      const angle = (i / particleCount) * Math.PI * 2;
+      const radius = 0.2 + Math.random() * 0.3;
+      particle.position.set(
+        Math.cos(angle) * radius,
+        -0.5 - (i * 0.2),
+        Math.sin(angle) * radius
+      );
+      particle.velocity = new THREE.Vector3(
+        (Math.random() - 0.5) * 0.02,
+        -0.05,
+        (Math.random() - 0.5) * 0.02
+      );
+      fireTrail.add(particle);
+    }
+    
+    bomb.add(fireTrail);
     this.scene.add(bomb);
     this.enemyBombs.push(bomb);
     this.playSound(this.sounds.enemyShoot, 0.3);
@@ -655,9 +681,16 @@ class Game {
     for (let i = this.enemyBombs.length - 1; i >= 0; i--) {
       const bomb = this.enemyBombs[i];
       bomb.position.add(bomb.velocity);
+      bomb.lifetime--;
 
-      // Remover bombas fora da tela
-      if (bomb.position.y < -25) {
+      // Atualizar partículas do fogo
+      bomb.children[0].children.forEach(particle => {
+        particle.position.add(particle.velocity);
+        particle.material.opacity = bomb.lifetime / 100;
+      });
+
+      // Remover bombas fora da tela ou com tempo expirado
+      if (bomb.position.y < -25 || bomb.lifetime <= 0) {
         this.scene.remove(bomb);
         this.enemyBombs.splice(i, 1);
       }
