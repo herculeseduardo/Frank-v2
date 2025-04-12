@@ -47,6 +47,7 @@ body::after {
 }
 
 canvas {
+  display: block;
   position: fixed;
   top: 0;
   left: 0;
@@ -54,10 +55,60 @@ canvas {
 }
 
 #info {
-  position: fixed;
-  top: 20px;
+  position: absolute;
+  top: 10px;
   width: 100%;
   text-align: center;
+  color: white;
+  font-size: 24px;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+#welcome-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+#welcome-screen h1 {
+  color: white;
+  font-size: 48px;
+  margin-bottom: 30px;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+#nickname-input {
+  padding: 15px 25px;
+  font-size: 24px;
+  border: 2px solid #4CAF50;
+  border-radius: 50px;
+  margin-bottom: 30px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.9);
+  width: 300px;
+  transition: all 0.3s ease;
+}
+
+#nickname-input:focus {
+  outline: none;
+  box-shadow: 0 0 10px #4CAF50;
+  transform: scale(1.02);
+}
+
+/* Estilos do score e power bar */
+#score {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
   color: white;
   font-size: 24px;
   text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
@@ -65,7 +116,7 @@ canvas {
 }
 
 #power-container {
-  position: fixed;
+  position: absolute;
   top: 60px;
   left: 50%;
   transform: translateX(-50%);
@@ -82,6 +133,19 @@ canvas {
   height: 100%;
   background-color: #ff0000;
   transition: width 0.3s;
+}
+
+#atomic-text {
+  position: absolute;
+  top: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  font-size: 18px;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 0.5s;
 }
 
 #instructions {
@@ -245,4 +309,231 @@ canvas {
 
 .hall-of-fame button:hover {
   background-color: #45a049;
+}
+
+/* Estilos do input e botões */
+.button-container {
+  display: flex;
+  gap: 30px;
+}
+
+.game-button {
+  padding: 15px 40px;
+  font-size: 24px;
+  color: white;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  font-weight: bold;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.game-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
+}
+
+.game-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#start-button {
+  background: linear-gradient(45deg, #4CAF50, #45a049);
+}
+
+#start-button:hover {
+  background: linear-gradient(45deg, #45a049, #4CAF50);
+}
+
+#show-ranking-button {
+  background: linear-gradient(45deg, #2196F3, #1976D2);
+}
+
+#show-ranking-button:hover {
+  background: linear-gradient(45deg, #1976D2, #2196F3);
+}
+
+/* Estilos do ranking */
+#ranking-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+#ranking-list {
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  padding: 30px;
+  border-radius: 15px;
+  max-height: 80vh;
+  overflow-y: auto;
+  width: 80%;
+  max-width: 600px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  border: 2px solid #4CAF50;
+}
+
+#ranking-list h2 {
+  color: #4CAF50;
+  text-align: center;
+  font-size: 32px;
+  margin-bottom: 30px;
+  text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+}
+
+.ranking-item {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 15px 20px;
+  margin-bottom: 15px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.ranking-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.first-place {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.3), rgba(255, 165, 0, 0.3));
+  border: 2px solid #FFD700;
+}
+
+.second-place {
+  background: linear-gradient(135deg, rgba(192, 192, 192, 0.3), rgba(169, 169, 169, 0.3));
+  border: 2px solid #C0C0C0;
+}
+
+.third-place {
+  background: linear-gradient(135deg, rgba(205, 127, 50, 0.3), rgba(139, 69, 19, 0.3));
+  border: 2px solid #CD7F32;
+}
+
+.ranking-position {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.position-number {
+  font-size: 24px;
+  font-weight: bold;
+  color: #4CAF50;
+  min-width: 40px;
+  text-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+}
+
+.player-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.player-name {
+  font-size: 18px;
+  color: white;
+  font-weight: bold;
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+}
+
+.player-date {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.player-score {
+  text-align: right;
+}
+
+.score-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #4CAF50;
+  display: block;
+  text-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+}
+
+.score-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.empty-message {
+  text-align: center;
+  padding: 30px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+.empty-message-content {
+  color: white;
+}
+
+.empty-message-content .star-icon {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 15px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.ranking-buttons {
+  display: flex;
+  gap: 30px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+#close-ranking, #play-again {
+  min-width: 280px;
+  padding: 15px 30px;
+  font-size: 20px;
+  color: white;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  font-weight: bold;
+  letter-spacing: 2px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+#close-ranking {
+  background: #4CAF50;
+}
+
+#close-ranking:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
+}
+
+#play-again {
+  background: #2196F3;
+}
+
+#play-again:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
 } 

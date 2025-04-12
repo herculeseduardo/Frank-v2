@@ -180,6 +180,57 @@ class Game {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(this.renderer.domElement);
 
+    // Criar elementos de UI
+    const scoreElement = document.createElement('div');
+    scoreElement.id = 'score';
+    scoreElement.style.position = 'absolute';
+    scoreElement.style.top = '20px';
+    scoreElement.style.left = '50%';
+    scoreElement.style.transform = 'translateX(-50%)';
+    scoreElement.style.color = 'white';
+    scoreElement.style.fontSize = '24px';
+    scoreElement.style.textShadow = '2px 2px 4px rgba(0,0,0,0.5)';
+    scoreElement.style.zIndex = '100';
+    scoreElement.textContent = 'Score: 0';
+    document.body.appendChild(scoreElement);
+
+    const powerContainer = document.createElement('div');
+    powerContainer.id = 'power-container';
+    powerContainer.style.position = 'absolute';
+    powerContainer.style.top = '60px';
+    powerContainer.style.left = '50%';
+    powerContainer.style.transform = 'translateX(-50%)';
+    powerContainer.style.width = '200px';
+    powerContainer.style.height = '20px';
+    powerContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    powerContainer.style.borderRadius = '10px';
+    powerContainer.style.overflow = 'hidden';
+    powerContainer.style.zIndex = '100';
+    document.body.appendChild(powerContainer);
+
+    const powerBar = document.createElement('div');
+    powerBar.id = 'power-bar';
+    powerBar.style.width = '0%';
+    powerBar.style.height = '100%';
+    powerBar.style.backgroundColor = '#ff0000';
+    powerBar.style.transition = 'width 0.3s';
+    powerContainer.appendChild(powerBar);
+
+    const atomicText = document.createElement('div');
+    atomicText.id = 'atomic-text';
+    atomicText.style.position = 'absolute';
+    atomicText.style.top = '90px';
+    atomicText.style.left = '50%';
+    atomicText.style.transform = 'translateX(-50%)';
+    atomicText.style.color = 'white';
+    atomicText.style.fontSize = '18px';
+    atomicText.style.textShadow = '2px 2px 4px rgba(0,0,0,0.5)';
+    atomicText.style.zIndex = '100';
+    atomicText.style.opacity = '0';
+    atomicText.style.transition = 'opacity 0.5s';
+    atomicText.textContent = 'Atomic Bomb';
+    document.body.appendChild(atomicText);
+
     // Adicionar fundo estelar
     const starGeometry = new THREE.BufferGeometry();
     const starMaterial = new THREE.PointsMaterial({
@@ -716,6 +767,12 @@ class Game {
 
   createAtomicBomb() {
     if (this.power >= this.maxPower) {
+      // Resetar a opacidade do texto
+      const atomicText = document.getElementById('atomic-text');
+      if (atomicText) {
+        atomicText.style.opacity = '0';
+      }
+
       // Criar explosão atômica
       const atomicExplosion = new THREE.Group();
       const particleCount = 100;
@@ -780,8 +837,17 @@ class Game {
 
   updatePowerDisplay() {
     const powerBar = document.getElementById('power-bar');
-    if (powerBar) {
-      powerBar.style.width = `${(this.power / this.maxPower) * 100}%`;
+    const atomicText = document.getElementById('atomic-text');
+    if (powerBar && atomicText) {
+      const powerPercentage = (this.power / this.maxPower) * 100;
+      powerBar.style.width = `${powerPercentage}%`;
+      
+      // Mostrar o texto gradualmente conforme o poder aumenta
+      if (powerPercentage > 0) {
+        atomicText.style.opacity = (powerPercentage / 100).toString();
+      } else {
+        atomicText.style.opacity = '0';
+      }
     }
   }
 
