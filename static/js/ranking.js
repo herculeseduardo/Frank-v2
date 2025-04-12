@@ -9,6 +9,7 @@ class RankingSystem {
         const startButton = document.getElementById('start-button');
         const nicknameInput = document.getElementById('nickname-input');
         const closeRanking = document.getElementById('close-ranking');
+        const showRankingButton = document.getElementById('show-ranking-button');
 
         startButton.addEventListener('click', () => {
             const nickname = nicknameInput.value.trim();
@@ -22,39 +23,22 @@ class RankingSystem {
         closeRanking.addEventListener('click', () => {
             this.hideRanking();
         });
+
+        showRankingButton.addEventListener('click', () => {
+            this.showRanking();
+        });
     }
 
-    async startGame(nickname) {
-        try {
-            // Verificar se o nickname já existe para este IP
-            const response = await fetch('/check-nickname', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ nickname })
-            });
+    startGame(nickname) {
+        this.currentPlayer = {
+            nickname,
+            score: 0,
+            date: new Date().toISOString()
+        };
 
-            const data = await response.json();
-            
-            if (data.exists) {
-                alert('Este nickname já está em uso. Por favor, escolha outro.');
-                return;
-            }
-
-            this.currentPlayer = {
-                nickname,
-                score: 0,
-                date: new Date().toISOString()
-            };
-
-            document.getElementById('welcome-screen').style.display = 'none';
-            // Iniciar o jogo aqui
-            startGame();
-        } catch (error) {
-            console.error('Erro ao verificar nickname:', error);
-            alert('Erro ao verificar nickname. Tente novamente.');
-        }
+        document.getElementById('welcome-screen').style.display = 'none';
+        // Iniciar o jogo aqui
+        startGame();
     }
 
     updateScore(score) {
@@ -63,60 +47,93 @@ class RankingSystem {
         }
     }
 
-    async saveScore() {
+    saveScore() {
         if (!this.currentPlayer) return;
 
-        try {
-            const response = await fetch('/save-score', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(this.currentPlayer)
-            });
+        // Verificar se já existe um score para este nickname
+        const existingPlayerIndex = this.ranking.findIndex(
+            player => player.nickname === this.currentPlayer.nickname
+        );
 
-            if (response.ok) {
-                this.showRanking();
+        if (existingPlayerIndex !== -1) {
+            // Se o novo score for maior, atualiza
+            if (this.currentPlayer.score > this.ranking[existingPlayerIndex].score) {
+                this.ranking[existingPlayerIndex] = this.currentPlayer;
             }
-        } catch (error) {
-            console.error('Erro ao salvar pontuação:', error);
+        } else {
+            // Adiciona novo jogador ao ranking
+            this.ranking.push(this.currentPlayer);
         }
+
+        // Ordena o ranking por score
+        this.ranking.sort((a, b) => b.score - a.score);
+        
+        // Mantém apenas os 10 melhores
+        this.ranking = this.ranking.slice(0, 10);
+
+        // Salva no localStorage
+        localStorage.setItem('ranking', JSON.stringify(this.ranking));
+
+        this.showRanking();
     }
 
     showRanking() {
         const rankingModal = document.getElementById('ranking-modal');
         const rankingItems = document.getElementById('ranking-items');
         
-        // Buscar ranking atualizado do servidor
-        this.fetchRanking().then(ranking => {
-            rankingItems.innerHTML = '';
-            ranking.forEach((player, index) => {
+        rankingItems.innerHTML = '';
+
+        if (this.ranking.length === 0) {
+            const emptyMessage = document.createElement('div');
+            emptyMessage.className = 'ranking-item';
+            emptyMessage.style.textAlign = 'center';
+            emptyMessage.style.padding = '20px';
+            emptyMessage.innerHTML = `
+                <p style="font-size: 18px; color: #666;">
+                    Nenhuma pontuação registrada ainda.<br>
+                    Jogue e seja o primeiro no ranking!
+                </p>
+            `;
+            rankingItems.appendChild(emptyMessage);
+        } else {
+            this.ranking.forEach((player, index) => {
                 const item = document.createElement('div');
                 item.className = 'ranking-item';
+                
+                // Adiciona classes diferentes para os três primeiros colocados
+                if (index === 0) {
+                    item.style.backgroundColor = '#FFD700';
+                    item.style.fontWeight = 'bold';
+                } else if (index === 1) {
+                    item.style.backgroundColor = '#C0C0C0';
+                } else if (index === 2) {
+                    item.style.backgroundColor = '#CD7F32';
+                }
+
+                const date = new Date(player.date);
+                const formattedDate = date.toLocaleDateString('pt-BR');
+                
                 item.innerHTML = `
-                    <span>${index + 1}. ${player.nickname}</span>
-                    <span>${player.score} pontos</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                        <div>
+                            <span style="font-size: 20px; font-weight: bold;">${index + 1}º</span>
+                            <span style="margin-left: 10px; font-size: 18px;">${player.nickname}</span>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 20px; font-weight: bold;">${player.score} pontos</div>
+                            <div style="font-size: 12px; color: #666;">${formattedDate}</div>
+                        </div>
+                    </div>
                 `;
                 rankingItems.appendChild(item);
             });
-        });
+        }
 
         rankingModal.style.display = 'flex';
     }
 
     hideRanking() {
         document.getElementById('ranking-modal').style.display = 'none';
-    }
-
-    async fetchRanking() {
-        try {
-            const response = await fetch('/get-ranking');
-            const data = await response.json();
-            return data;
-        } catch (error) {
-            console.error('Erro ao buscar ranking:', error);
-            return [];
-        }
     }
 }
 

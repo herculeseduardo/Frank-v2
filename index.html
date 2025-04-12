@@ -48,17 +48,29 @@
         margin-bottom: 20px;
         text-align: center;
       }
-      #start-button {
+      .button-container {
+        display: flex;
+        gap: 20px;
+      }
+      .game-button {
         padding: 15px 30px;
         font-size: 24px;
-        background: #4CAF50;
         color: white;
         border: none;
         border-radius: 5px;
         cursor: pointer;
       }
+      #start-button {
+        background: #4CAF50;
+      }
       #start-button:hover {
         background: #45a049;
+      }
+      #show-ranking-button {
+        background: #2196F3;
+      }
+      #show-ranking-button:hover {
+        background: #1976D2;
       }
       #ranking-modal {
         position: fixed;
@@ -103,7 +115,10 @@
     <div id="welcome-screen">
       <h1>Bem-vindo ao Frank!</h1>
       <input type="text" id="nickname-input" placeholder="Digite seu nickname" maxlength="15">
-      <button id="start-button">Começar Jogo</button>
+      <div class="button-container">
+        <button id="start-button">Começar Jogo</button>
+        <button id="show-ranking-button">Ver Ranking</button>
+      </div>
     </div>
 
     <div id="info">Pontuação: <span id="score">0</span></div>
