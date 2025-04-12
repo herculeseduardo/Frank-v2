@@ -41,6 +41,54 @@ class Game {
       speedInterval: 10000, // Intervalo para aumentar velocidade (10 segundos)
     };
 
+    // Novas propriedades para a estrela brilhante
+    this.powerStar = null;
+    this.powerStarSpawnTime = 0;
+    this.powerStarSpawnInterval = 30000; // 30 segundos
+    this.currentBulletType = 0; // Tipo de tiro atual (0-4)
+    this.bulletTypes = [
+      {
+        name: "Normal",
+        color: 0xffff00,
+        size: 0.5,
+        speed: 0.5,
+        damage: 1,
+        create: (position) => this.createNormalBullet(position)
+      },
+      {
+        name: "Laser",
+        color: 0xff0000,
+        size: 0.3,
+        speed: 0.8,
+        damage: 2,
+        create: (position) => this.createLaserBullet(position)
+      },
+      {
+        name: "Plasma",
+        color: 0x00ff00,
+        size: 0.7,
+        speed: 0.4,
+        damage: 3,
+        create: (position) => this.createPlasmaBullet(position)
+      },
+      {
+        name: "Raios",
+        color: 0x00ffff,
+        size: 0.4,
+        speed: 0.6,
+        damage: 2,
+        create: (position) => this.createLightningBullet(position)
+      },
+      {
+        name: "Explosivo",
+        color: 0xff9900,
+        size: 0.6,
+        speed: 0.3,
+        damage: 4,
+        create: (position) => this.createExplosiveBullet(position)
+      }
+    ];
+
     // Inicializar sistema de áudio
     this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
     this.sounds = {
@@ -621,13 +669,8 @@ class Game {
   }
 
   createBullet() {
-    const geometry = new THREE.SphereGeometry(0.5, 16, 16);
-    const material = new THREE.MeshPhongMaterial({ color: 0xffff00 });
-    const bullet = new THREE.Mesh(geometry, material);
-
-    bullet.position.copy(this.player.position);
-    bullet.position.y += 2;
-
+    const bulletType = this.bulletTypes[this.currentBulletType];
+    const bullet = bulletType.create(this.player.position);
     this.scene.add(bullet);
     this.bullets.push(bullet);
     this.playSound(this.sounds.shoot, 0.2);
@@ -857,7 +900,7 @@ class Game {
       for (let j = this.enemies.length - 1; j >= 0; j--) {
         const enemy = this.enemies[j];
         if (bullet.position.distanceTo(enemy.position) < 2) {
-          enemy.health--;
+          enemy.health -= bullet.userData.damage;
           
           if (enemy.health <= 0) {
             this.createExplosion(enemy.position.x, enemy.position.y, enemy.enemyType.color, 'enemy');
@@ -868,6 +911,11 @@ class Game {
             this.power += 5;
             this.updatePowerDisplay();
             this.playSound(this.sounds.explosion, 0.5);
+          }
+          
+          // Se for um tiro explosivo, criar uma explosão adicional
+          if (bullet.userData.type === 'explosive') {
+            this.createExplosion(bullet.position.x, bullet.position.y, 0xff9900, 'bomb');
           }
           
           this.scene.remove(bullet);
@@ -959,7 +1007,9 @@ class Game {
       this.updateEnemies();
       this.updateEnemyBombs();
       this.updateExplosions();
+      this.updatePowerStar();
       this.checkCollisions();
+      this.checkPowerStarCollision();
 
       // Animar as estrelas
       if (this.stars) {
@@ -985,6 +1035,199 @@ class Game {
 
     this.renderer.render(this.scene, this.camera);
     requestAnimationFrame(() => this.gameLoop());
+  }
+
+  createPowerStar() {
+    if (this.powerStar) return; // Já existe uma estrela
+
+    const geometry = new THREE.SphereGeometry(1, 32, 32);
+    const material = new THREE.MeshPhongMaterial({
+      color: 0xffffff,
+      emissive: 0xffffff,
+      emissiveIntensity: 1,
+      shininess: 100
+    });
+
+    const star = new THREE.Mesh(geometry, material);
+    
+    // Posicionar a estrela aleatoriamente na parte superior da tela
+    star.position.set(
+      (Math.random() - 0.5) * this.gameArea.width,
+      this.gameArea.height/2,
+      0
+    );
+
+    // Adicionar efeito de pulsação
+    star.userData.pulseSpeed = 0.05;
+    star.userData.pulseScale = 1;
+    star.userData.speed = 0.1; // Velocidade de queda
+    star.userData.trail = []; // Array para armazenar o rastro
+
+    this.powerStar = star;
+    this.scene.add(star);
+
+    // Criar rastro
+    const trailGeometry = new THREE.BufferGeometry();
+    const trailMaterial = new THREE.PointsMaterial({
+      color: 0xffffff,
+      size: 0.2,
+      transparent: true,
+      opacity: 0.5
+    });
+    const trail = new THREE.Points(trailGeometry, trailMaterial);
+    star.add(trail);
+    star.userData.trailObject = trail;
+  }
+
+  updatePowerStar() {
+    if (!this.powerStar) {
+      const currentTime = Date.now();
+      if (currentTime - this.powerStarSpawnTime > this.powerStarSpawnInterval) {
+        this.createPowerStar();
+        this.powerStarSpawnTime = currentTime;
+      }
+      return;
+    }
+
+    // Efeito de pulsação
+    this.powerStar.userData.pulseScale += this.powerStar.userData.pulseSpeed;
+    if (this.powerStar.userData.pulseScale > 1.2 || this.powerStar.userData.pulseScale < 0.8) {
+      this.powerStar.userData.pulseSpeed *= -1;
+    }
+    this.powerStar.scale.set(
+      this.powerStar.userData.pulseScale,
+      this.powerStar.userData.pulseScale,
+      this.powerStar.userData.pulseScale
+    );
+
+    // Movimento para baixo
+    this.powerStar.position.y -= this.powerStar.userData.speed;
+
+    // Atualizar rastro
+    this.powerStar.userData.trail.push(this.powerStar.position.clone());
+    if (this.powerStar.userData.trail.length > 20) {
+      this.powerStar.userData.trail.shift();
+    }
+
+    // Atualizar geometria do rastro
+    const positions = new Float32Array(this.powerStar.userData.trail.length * 3);
+    for (let i = 0; i < this.powerStar.userData.trail.length; i++) {
+      positions[i * 3] = this.powerStar.userData.trail[i].x;
+      positions[i * 3 + 1] = this.powerStar.userData.trail[i].y;
+      positions[i * 3 + 2] = this.powerStar.userData.trail[i].z;
+    }
+    this.powerStar.userData.trailObject.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+    // Remover estrela se sair da tela
+    if (this.powerStar.position.y < -this.gameArea.height/2) {
+      this.scene.remove(this.powerStar);
+      this.powerStar = null;
+    }
+  }
+
+  createNormalBullet(position) {
+    const geometry = new THREE.SphereGeometry(0.5, 16, 16);
+    const material = new THREE.MeshPhongMaterial({ color: 0xffff00 });
+    const bullet = new THREE.Mesh(geometry, material);
+    bullet.position.copy(position);
+    bullet.position.y += 2;
+    bullet.userData = { type: 'normal', damage: 1 };
+    return bullet;
+  }
+
+  createLaserBullet(position) {
+    const geometry = new THREE.CylinderGeometry(0.1, 0.1, 2, 8);
+    const material = new THREE.MeshPhongMaterial({ 
+      color: 0xff0000,
+      emissive: 0xff0000,
+      emissiveIntensity: 0.5
+    });
+    const bullet = new THREE.Mesh(geometry, material);
+    bullet.position.copy(position);
+    bullet.position.y += 2;
+    bullet.rotation.x = Math.PI / 2;
+    bullet.userData = { type: 'laser', damage: 2 };
+    return bullet;
+  }
+
+  createPlasmaBullet(position) {
+    const geometry = new THREE.SphereGeometry(0.7, 32, 32);
+    const material = new THREE.MeshPhongMaterial({ 
+      color: 0x00ff00,
+      emissive: 0x00ff00,
+      emissiveIntensity: 0.5
+    });
+    const bullet = new THREE.Mesh(geometry, material);
+    bullet.position.copy(position);
+    bullet.position.y += 2;
+    bullet.userData = { type: 'plasma', damage: 3 };
+    return bullet;
+  }
+
+  createLightningBullet(position) {
+    const group = new THREE.Group();
+    const geometry = new THREE.CylinderGeometry(0.1, 0.1, 1.5, 8);
+    const material = new THREE.MeshPhongMaterial({ 
+      color: 0x00ffff,
+      emissive: 0x00ffff,
+      emissiveIntensity: 0.8
+    });
+    
+    for (let i = 0; i < 3; i++) {
+      const bolt = new THREE.Mesh(geometry, material);
+      bolt.rotation.x = Math.PI / 2;
+      bolt.position.x = (i - 1) * 0.5;
+      group.add(bolt);
+    }
+    
+    group.position.copy(position);
+    group.position.y += 2;
+    group.userData = { type: 'lightning', damage: 2 };
+    return group;
+  }
+
+  createExplosiveBullet(position) {
+    const geometry = new THREE.SphereGeometry(0.6, 32, 32);
+    const material = new THREE.MeshPhongMaterial({ 
+      color: 0xff9900,
+      emissive: 0xff9900,
+      emissiveIntensity: 0.5
+    });
+    const bullet = new THREE.Mesh(geometry, material);
+    bullet.position.copy(position);
+    bullet.position.y += 2;
+    bullet.userData = { type: 'explosive', damage: 4 };
+    return bullet;
+  }
+
+  checkPowerStarCollision() {
+    if (!this.powerStar) return;
+
+    if (this.player.position.distanceTo(this.powerStar.position) < 2) {
+      // Colisão detectada
+      this.scene.remove(this.powerStar);
+      this.powerStar = null;
+      
+      // Mudar para o próximo tipo de tiro
+      this.currentBulletType = (this.currentBulletType + 1) % this.bulletTypes.length;
+      
+      // Mostrar mensagem de power-up
+      const message = document.createElement('div');
+      message.style.position = 'absolute';
+      message.style.top = '50%';
+      message.style.left = '50%';
+      message.style.transform = 'translate(-50%, -50%)';
+      message.style.color = 'white';
+      message.style.fontSize = '24px';
+      message.style.textAlign = 'center';
+      message.style.zIndex = '1000';
+      message.textContent = `Power-up: ${this.bulletTypes[this.currentBulletType].name}`;
+      document.body.appendChild(message);
+      
+      setTimeout(() => {
+        document.body.removeChild(message);
+      }, 2000);
+    }
   }
 }
 
