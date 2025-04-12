@@ -772,7 +772,29 @@ class Game {
   updateEnemies() {
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const enemy = this.enemies[i];
-      enemy.position.y -= enemy.speed;
+      
+      // Aumentar velocidade de queda base
+      enemy.position.y -= enemy.speed * 1.5; // 50% mais rápido
+      
+      // Adicionar movimento diagonal para alguns inimigos
+      if (!enemy.hasDiagonalMovement) {
+        // 30% de chance de ter movimento diagonal
+        if (Math.random() < 0.3) {
+          enemy.hasDiagonalMovement = true;
+          enemy.direction = Math.random() < 0.5 ? 1 : -1; // Direção aleatória
+          enemy.diagonalSpeed = enemy.speed * 0.8; // Velocidade diagonal
+        }
+      }
+      
+      // Aplicar movimento diagonal se o inimigo tiver
+      if (enemy.hasDiagonalMovement) {
+        enemy.position.x += enemy.diagonalSpeed * enemy.direction;
+        
+        // Inverter direção se atingir os limites da tela
+        if (enemy.position.x > this.gameArea.width/2 || enemy.position.x < -this.gameArea.width/2) {
+          enemy.direction *= -1;
+        }
+      }
 
       const currentTime = Date.now();
       if (currentTime - enemy.lastBombTime > enemy.bombInterval) {
