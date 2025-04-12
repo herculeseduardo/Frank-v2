@@ -992,10 +992,26 @@ class Game {
   startSpeedIncrease() {
     setInterval(() => {
       if (this.gameState === "playing") {
+        // Aumentar a velocidade base
         this.settings.baseSpeed += this.settings.speedIncrease;
+        
+        // Aplicar o aumento de velocidade para todos os elementos
         this.settings.enemySpeed = this.settings.baseSpeed;
         this.settings.bulletSpeed = this.settings.baseSpeed * 5;
         this.settings.playerSpeed = this.settings.baseSpeed * 2;
+        
+        // Aumentar velocidade das bombas inimigas
+        for (const bomb of this.enemyBombs) {
+          bomb.velocity.y = -0.08 - (this.settings.baseSpeed * 0.5);
+        }
+        
+        // Aumentar velocidade da estrela de poder
+        if (this.powerStar) {
+          this.powerStar.userData.speed = 0.1 + (this.settings.baseSpeed * 0.5);
+        }
+        
+        // Aumentar velocidade de spawn dos inimigos
+        this.settings.spawnInterval = Math.max(500, 2000 - (this.settings.baseSpeed * 1000));
       }
     }, this.settings.speedInterval);
   }
