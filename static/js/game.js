@@ -376,12 +376,15 @@ class Game {
   }
 
   createExplosionSound() {
-    const bufferSize = this.audioContext.sampleRate * 0.5;
+    const bufferSize = this.audioContext.sampleRate * 0.2; // Reduzido de 0.5 para 0.2 segundos
     const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
     const data = buffer.getChannelData(0);
 
     for (let i = 0; i < bufferSize; i++) {
-      data[i] = Math.random() * 2 - 1;
+      // Criando um som mais suave usando uma função seno com envelope exponencial
+      const t = i / bufferSize;
+      const envelope = Math.exp(-t * 5); // Envelope exponencial para decaimento suave
+      data[i] = Math.sin(i * 0.1) * envelope * 0.5; // Amplitude reduzida para 0.5
     }
 
     this.sounds.explosion = buffer;
