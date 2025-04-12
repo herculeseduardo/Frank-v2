@@ -197,15 +197,15 @@ class Game {
     this.stars = new THREE.Points(starGeometry, starMaterial);
     this.scene.add(this.stars);
 
-    // Configurar câmera com zoom maior
-    this.camera.position.z = 30; // Reduzido de 50 para 30
+    // Configurar câmera com zoom menor
+    this.camera.position.z = 80; // Aumentado de 30 para 80
     this.camera.position.y = 0;
     this.camera.lookAt(0, 0, 0);
 
     // Ajustar área do jogo para o novo zoom
     this.gameArea = {
-      width: 60, // Reduzido de 100 para 60
-      height: 60  // Reduzido de 100 para 60
+      width: 100, // Aumentado de 60 para 100
+      height: 100  // Aumentado de 60 para 100
     };
 
     // Criar jogador
