@@ -85,14 +85,13 @@ class RankingSystem {
 
         if (this.ranking.length === 0) {
             const emptyMessage = document.createElement('div');
-            emptyMessage.className = 'ranking-item';
-            emptyMessage.style.textAlign = 'center';
-            emptyMessage.style.padding = '20px';
+            emptyMessage.className = 'ranking-item empty-message';
             emptyMessage.innerHTML = `
-                <p style="font-size: 18px; color: #666;">
-                    Nenhuma pontuação registrada ainda.<br>
-                    Jogue e seja o primeiro no ranking!
-                </p>
+                <div class="empty-message-content">
+                    <i class="star-icon">⭐</i>
+                    <p>Nenhuma pontuação registrada ainda.</p>
+                    <p>Jogue e seja o primeiro no ranking!</p>
+                </div>
             `;
             rankingItems.appendChild(emptyMessage);
         } else {
@@ -102,27 +101,27 @@ class RankingSystem {
                 
                 // Adiciona classes diferentes para os três primeiros colocados
                 if (index === 0) {
-                    item.style.backgroundColor = '#FFD700';
-                    item.style.fontWeight = 'bold';
+                    item.classList.add('first-place');
                 } else if (index === 1) {
-                    item.style.backgroundColor = '#C0C0C0';
+                    item.classList.add('second-place');
                 } else if (index === 2) {
-                    item.style.backgroundColor = '#CD7F32';
+                    item.classList.add('third-place');
                 }
 
                 const date = new Date(player.date);
                 const formattedDate = date.toLocaleDateString('pt-BR');
                 
                 item.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                        <div>
-                            <span style="font-size: 20px; font-weight: bold;">${index + 1}º</span>
-                            <span style="margin-left: 10px; font-size: 18px;">${player.nickname}</span>
+                    <div class="ranking-position">
+                        <span class="position-number">${index + 1}º</span>
+                        <div class="player-info">
+                            <span class="player-name">${player.nickname}</span>
+                            <span class="player-date">${formattedDate}</span>
                         </div>
-                        <div style="text-align: right;">
-                            <div style="font-size: 20px; font-weight: bold;">${player.score} pontos</div>
-                            <div style="font-size: 12px; color: #666;">${formattedDate}</div>
-                        </div>
+                    </div>
+                    <div class="player-score">
+                        <span class="score-value">${player.score}</span>
+                        <span class="score-label">pontos</span>
                     </div>
                 `;
                 rankingItems.appendChild(item);
