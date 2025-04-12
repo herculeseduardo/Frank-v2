@@ -191,7 +191,6 @@ class Game {
     scoreElement.style.fontSize = '24px';
     scoreElement.style.textShadow = '2px 2px 4px rgba(0,0,0,0.5)';
     scoreElement.style.zIndex = '100';
-    scoreElement.textContent = 'Score: 0';
     document.body.appendChild(scoreElement);
 
     const powerContainer = document.createElement('div');
@@ -720,7 +719,7 @@ class Game {
       bullet.position.y += this.settings.bulletSpeed;
 
       // Remover balas fora da tela
-      if (bullet.position.y > 25) {
+      if (bullet.position.y > this.gameArea.height/2) {
         this.scene.remove(bullet);
         this.bullets.splice(i, 1);
       }
