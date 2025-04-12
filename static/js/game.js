@@ -16,7 +16,7 @@ class Game {
     this.score = 0;
     this.power = 0; // Acumulador de poder
     this.maxPower = 100; // Poder máximo
-    this.gameState = "playing";
+    this.gameState = "paused"; // Estado inicial como pausado
     this.stars = null;
     this.difficultyLevel = 1;
     this.lastDifficultyIncrease = 0;
@@ -268,6 +268,15 @@ class Game {
         break;
       case "x":
         this.createAtomicBomb(); // Tecla X para ativar a bomba atômica
+        break;
+      case " ": // Barra de espaço
+        if (this.gameState === "paused") {
+          this.gameState = "playing";
+          const pauseMessage = document.getElementById('pause-message');
+          if (pauseMessage) {
+            pauseMessage.remove();
+          }
+        }
         break;
     }
   }
@@ -722,7 +731,7 @@ class Game {
           document.getElementById("score").textContent = Math.floor(this.score);
           this.power += 5;
           this.updatePowerDisplay();
-          this.playSound(this.sounds.shoot, 0.2); // Adicionar som de tiro ao acertar inimigo
+          this.playSound(this.sounds.explosion, 0.5); // Tocar som de explosão ao acertar inimigo
           break;
         }
       }
@@ -837,6 +846,22 @@ class Game {
       // Animar as estrelas
       if (this.stars) {
         this.stars.rotation.y += 0.0001;
+      }
+    } else if (this.gameState === "paused") {
+      // Mostrar mensagem de pausa
+      if (!document.getElementById('pause-message')) {
+        const pauseMessage = document.createElement('div');
+        pauseMessage.id = 'pause-message';
+        pauseMessage.style.position = 'absolute';
+        pauseMessage.style.top = '50%';
+        pauseMessage.style.left = '50%';
+        pauseMessage.style.transform = 'translate(-50%, -50%)';
+        pauseMessage.style.color = 'white';
+        pauseMessage.style.fontSize = '24px';
+        pauseMessage.style.textAlign = 'center';
+        pauseMessage.style.zIndex = '1000';
+        pauseMessage.innerHTML = 'Pressione ESPAÇO para começar';
+        document.body.appendChild(pauseMessage);
       }
     }
 
