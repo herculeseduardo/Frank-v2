@@ -22,18 +22,111 @@
         font-size: 24px;
         text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
       }
+      #welcome-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+      #welcome-screen h1 {
+        color: white;
+        font-size: 48px;
+        margin-bottom: 30px;
+      }
+      #nickname-input {
+        padding: 10px;
+        font-size: 24px;
+        border: none;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+      #start-button {
+        padding: 15px 30px;
+        font-size: 24px;
+        background: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      #start-button:hover {
+        background: #45a049;
+      }
+      #ranking-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+      #ranking-list {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        max-height: 80vh;
+        overflow-y: auto;
+        width: 80%;
+        max-width: 600px;
+      }
+      .ranking-item {
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+        display: flex;
+        justify-content: space-between;
+      }
+      #close-ranking {
+        margin-top: 20px;
+        padding: 10px 20px;
+        background: #f44336;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
     </style>
   </head>
   <body>
+    <div id="welcome-screen">
+      <h1>Bem-vindo ao Frank!</h1>
+      <input type="text" id="nickname-input" placeholder="Digite seu nickname" maxlength="15">
+      <button id="start-button">Começar Jogo</button>
+    </div>
+
     <div id="info">Pontuação: <span id="score">0</span></div>
     <div id="power-container">
       <div id="power-bar"></div>
     </div>
+    <div id="instructions">
+      Use as setas para mover | Z para atirar | X para bomba nuclear
+    </div>
     <canvas id="canvas"></canvas>
+
+    <div id="ranking-modal">
+      <div id="ranking-list">
+        <h2>Hall da Fama</h2>
+        <div id="ranking-items"></div>
+      </div>
+      <button id="close-ranking">Fechar</button>
+    </div>
 
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="./static/js/game.js"></script>
+    <script src="./static/js/ranking.js"></script>
   </body>
 </html>
 
