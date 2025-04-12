@@ -21,7 +21,7 @@ class Game {
     this.difficultyLevel = 1;
     this.lastDifficultyIncrease = 0;
     this.gameArea = {
-      width: 100,
+      width: 150,
       height: 150
     };
     this.controls = {
@@ -257,8 +257,8 @@ class Game {
 
     // Ajustar área do jogo para o novo zoom
     this.gameArea = {
-      width: 100,
-      height: 150  // Aumentado de 100 para 150
+      width: 150,
+      height: 150
     };
 
     // Criar jogador
