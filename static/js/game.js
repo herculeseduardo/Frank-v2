@@ -59,6 +59,8 @@ class Game {
         bombColor: 0xff3333,
         speed: 0.15,
         pointsRequired: 0,
+        health: 1,
+        scoreValue: 1,
         createGeometry: () => {
           const group = new THREE.Group();
           const body = new THREE.Mesh(
@@ -88,6 +90,8 @@ class Game {
         bombColor: 0xffcc00,
         speed: 0.08,
         pointsRequired: 10,
+        health: 2,
+        scoreValue: 2,
         createGeometry: () => {
           const group = new THREE.Group();
           const body = new THREE.Mesh(
@@ -116,6 +120,8 @@ class Game {
         bombColor: 0x33ff33,
         speed: 0.2,
         pointsRequired: 20,
+        health: 1,
+        scoreValue: 3,
         createGeometry: () => {
           const group = new THREE.Group();
           const body = new THREE.Mesh(
@@ -134,6 +140,31 @@ class Game {
           const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
           rightWing.position.set(1.5, 0, 0);
           group.add(rightWing);
+
+          return group;
+        }
+      },
+      {
+        name: "Nave Mãe",
+        color: 0x9900ff,
+        bombColor: 0xcc33ff,
+        speed: 0.05,
+        pointsRequired: 30,
+        health: 3,
+        scoreValue: 5,
+        createGeometry: () => {
+          const group = new THREE.Group();
+          const body = new THREE.Mesh(
+            new THREE.SphereGeometry(2, 16, 16),
+            new THREE.MeshPhongMaterial({ color: 0x9900ff, shininess: 100 })
+          );
+          group.add(body);
+
+          const ringGeometry = new THREE.TorusGeometry(3, 0.3, 16, 32);
+          const ringMaterial = new THREE.MeshPhongMaterial({ color: 0x9900ff, shininess: 100 });
+          const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+          ring.rotation.x = Math.PI / 2;
+          group.add(ring);
 
           return group;
         }
@@ -432,39 +463,19 @@ class Game {
     this.activeSounds = [];
   }
 
-  createEnemy() {
+  createEnemyGroup() {
     // Filtrar tipos de inimigos disponíveis baseado na pontuação
     const availableTypes = this.enemyTypes.filter(type => this.score >= type.pointsRequired);
     if (availableTypes.length === 0) return;
 
     // Escolher um tipo aleatório dos disponíveis
     const enemyType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
-    const enemyShip = enemyType.createGeometry();
-
-    // Posicionar o inimigo
-    enemyShip.position.set(
-      Math.random() * this.gameArea.width - this.gameArea.width/2,
-      20,
-      0
-    );
-
-    // Adicionar propriedades específicas do tipo de inimigo
-    enemyShip.enemyType = enemyType;
-    enemyShip.lastBombTime = 0;
-    enemyShip.bombInterval = 3000 + Math.random() * 2000;
-    enemyShip.speed = enemyType.speed;
-
-    this.scene.add(enemyShip);
-    this.enemies.push(enemyShip);
-  }
-
-  createEnemyGroup() {
-    // Criar grupo de 3 inimigos lentos (Bombardeiros)
-    const spacing = 10;
-    const startX = -spacing;
     
-    for (let i = 0; i < 3; i++) {
-      const enemyType = this.enemyTypes.find(type => type.name === "Bombardeiro");
+    // Criar grupo de 2 inimigos do mesmo tipo
+    const spacing = 10;
+    const startX = -spacing/2; // Centralizar o grupo
+    
+    for (let i = 0; i < 2; i++) {
       const enemyShip = enemyType.createGeometry();
       
       enemyShip.position.set(
@@ -474,6 +485,7 @@ class Game {
       );
 
       enemyShip.enemyType = enemyType;
+      enemyShip.health = enemyType.health;
       enemyShip.lastBombTime = 0;
       enemyShip.bombInterval = 3000 + Math.random() * 2000;
       enemyShip.speed = enemyType.speed;
@@ -722,16 +734,21 @@ class Game {
       for (let j = this.enemies.length - 1; j >= 0; j--) {
         const enemy = this.enemies[j];
         if (bullet.position.distanceTo(enemy.position) < 2) {
-          this.createExplosion(enemy.position.x, enemy.position.y, enemy.enemyType.color, 'enemy');
+          enemy.health--;
+          
+          if (enemy.health <= 0) {
+            this.createExplosion(enemy.position.x, enemy.position.y, enemy.enemyType.color, 'enemy');
+            this.scene.remove(enemy);
+            this.enemies.splice(j, 1);
+            this.score += enemy.enemyType.scoreValue;
+            document.getElementById("score").textContent = Math.floor(this.score);
+            this.power += 5;
+            this.updatePowerDisplay();
+            this.playSound(this.sounds.explosion, 0.5);
+          }
+          
           this.scene.remove(bullet);
-          this.scene.remove(enemy);
           this.bullets.splice(i, 1);
-          this.enemies.splice(j, 1);
-          this.score++;
-          document.getElementById("score").textContent = Math.floor(this.score);
-          this.power += 5;
-          this.updatePowerDisplay();
-          this.playSound(this.sounds.explosion, 0.5); // Tocar som de explosão ao acertar inimigo
           break;
         }
       }
@@ -824,11 +841,9 @@ class Game {
   startEnemySpawn() {
     setInterval(() => {
       if (this.gameState === "playing") {
-        // 30% de chance de criar um grupo de inimigos lentos
-        if (Math.random() < 0.3) {
+        // 70% de chance de criar um grupo de inimigos
+        if (Math.random() < 0.7) {
           this.createEnemyGroup();
-        } else {
-          this.createEnemy();
         }
       }
     }, this.settings.spawnInterval);
