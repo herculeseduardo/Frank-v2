@@ -472,15 +472,18 @@ class Game {
     const enemyType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
     
     // Criar grupo de 2 inimigos do mesmo tipo
-    const spacing = 10;
+    const spacing = 15; // Aumentado o espaçamento
     const startX = -spacing/2; // Centralizar o grupo
     
     for (let i = 0; i < 2; i++) {
       const enemyShip = enemyType.createGeometry();
       
+      // Posicionar os inimigos em diferentes alturas
+      const heightOffset = (Math.random() - 0.5) * 5; // Variação de altura
+      
       enemyShip.position.set(
         startX + (i * spacing),
-        20,
+        20 + heightOffset, // Adiciona variação na altura
         0
       );
 
