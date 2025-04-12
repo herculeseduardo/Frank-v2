@@ -22,7 +22,7 @@ class Game {
     this.lastDifficultyIncrease = 0;
     this.gameArea = {
       width: 100,
-      height: 100
+      height: 150
     };
     this.controls = {
       left: false,
@@ -36,6 +36,9 @@ class Game {
       bulletSpeed: 0.5,
       enemySpeed: 0.1,
       spawnInterval: 2000,
+      baseSpeed: 0.1, // Velocidade base
+      speedIncrease: 0.01, // Incremento de velocidade
+      speedInterval: 10000, // Intervalo para aumentar velocidade (10 segundos)
     };
 
     // Inicializar sistema de áudio
@@ -222,6 +225,9 @@ class Game {
 
     // Iniciar spawn de inimigos
     this.startEnemySpawn();
+
+    // Iniciar aumento progressivo de velocidade
+    this.startSpeedIncrease();
   }
 
   createPlayer() {
@@ -742,23 +748,28 @@ class Game {
       this.scene.add(atomicExplosion);
       this.explosions.push(atomicExplosion);
 
-      // Destruir todos os inimigos na tela
+      // Destruir todos os inimigos na tela e pontuar
+      let totalScore = 0;
       for (let i = this.enemies.length - 1; i >= 0; i--) {
         const enemy = this.enemies[i];
         this.createExplosion(enemy.position.x, enemy.position.y, enemy.enemyType.color, 'enemy');
         this.scene.remove(enemy);
         this.enemies.splice(i, 1);
-        this.score += 2;
+        totalScore += enemy.enemyType.scoreValue * 2; // Dobrando a pontuação para cada inimigo
       }
 
-      // Destruir todas as bombas inimigas
+      // Destruir todas as bombas inimigas e pontuar
       for (let i = this.enemyBombs.length - 1; i >= 0; i--) {
         const bomb = this.enemyBombs[i];
         this.createExplosion(bomb.position.x, bomb.position.y, bomb.material.color.getHex(), 'bomb');
         this.scene.remove(bomb);
         this.enemyBombs.splice(i, 1);
-        this.score += 0.5;
+        totalScore += 1; // 1 ponto por bomba
       }
+
+      // Adicionar pontuação total
+      this.score += totalScore;
+      document.getElementById("score").textContent = Math.floor(this.score);
 
       // Resetar o poder
       this.power = 0;
@@ -863,6 +874,17 @@ class Game {
         }
       }
     }, this.settings.spawnInterval);
+  }
+
+  startSpeedIncrease() {
+    setInterval(() => {
+      if (this.gameState === "playing") {
+        this.settings.baseSpeed += this.settings.speedIncrease;
+        this.settings.enemySpeed = this.settings.baseSpeed;
+        this.settings.bulletSpeed = this.settings.baseSpeed * 5;
+        this.settings.playerSpeed = this.settings.baseSpeed * 2;
+      }
+    }, this.settings.speedInterval);
   }
 
   gameLoop() {
