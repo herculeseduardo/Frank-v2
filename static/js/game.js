@@ -198,14 +198,14 @@ class Game {
     this.scene.add(this.stars);
 
     // Configurar câmera com zoom menor
-    this.camera.position.z = 80; // Aumentado de 30 para 80
+    this.camera.position.z = 80;
     this.camera.position.y = 0;
     this.camera.lookAt(0, 0, 0);
 
     // Ajustar área do jogo para o novo zoom
     this.gameArea = {
-      width: 100, // Aumentado de 60 para 100
-      height: 100  // Aumentado de 60 para 100
+      width: 100,
+      height: 150  // Aumentado de 100 para 150
     };
 
     // Criar jogador
@@ -366,7 +366,7 @@ class Game {
     
     oscillator.type = 'sine';
     oscillator.frequency.setValueAtTime(200, this.audioContext.currentTime);
-    gainNode.gain.setValueAtTime(0.1, this.audioContext.currentTime);
+    gainNode.gain.setValueAtTime(0.05, this.audioContext.currentTime);
     
     oscillator.connect(gainNode);
     gainNode.connect(this.audioContext.destination);
@@ -376,15 +376,14 @@ class Game {
   }
 
   createExplosionSound() {
-    const bufferSize = this.audioContext.sampleRate * 0.2; // Reduzido de 0.5 para 0.2 segundos
+    const bufferSize = this.audioContext.sampleRate * 0.2;
     const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
     const data = buffer.getChannelData(0);
 
     for (let i = 0; i < bufferSize; i++) {
-      // Criando um som mais suave usando uma função seno com envelope exponencial
       const t = i / bufferSize;
-      const envelope = Math.exp(-t * 5); // Envelope exponencial para decaimento suave
-      data[i] = Math.sin(i * 0.1) * envelope * 0.5; // Amplitude reduzida para 0.5
+      const envelope = Math.exp(-t * 5);
+      data[i] = Math.sin(i * 0.1) * envelope * 0.8;
     }
 
     this.sounds.explosion = buffer;
@@ -445,7 +444,7 @@ class Game {
     const gainNode = this.audioContext.createGain();
     
     source.buffer = soundBuffer;
-    gainNode.gain.value = volume;
+    gainNode.gain.value = volume * 2; // Dobrando o volume
     
     source.connect(gainNode);
     gainNode.connect(this.audioContext.destination);
@@ -465,11 +464,18 @@ class Game {
   }
 
   stopAllSounds() {
+    // Parar todos os sons ativos
     this.activeSounds.forEach(sound => {
       sound.source.stop();
       sound.gainNode.disconnect();
     });
     this.activeSounds = [];
+
+    // Parar o som do motor
+    if (this.sounds.engine) {
+      this.sounds.engine.oscillator.stop();
+      this.sounds.engine.gainNode.disconnect();
+    }
   }
 
   createEnemyGroup() {
@@ -492,7 +498,7 @@ class Game {
       
       enemyShip.position.set(
         xPosition,
-        20 + heightOffset,
+        40 + heightOffset, // Aumentado de 20 para 40
         0
       );
 
