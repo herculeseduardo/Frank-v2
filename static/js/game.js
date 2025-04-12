@@ -197,10 +197,16 @@ class Game {
     this.stars = new THREE.Points(starGeometry, starMaterial);
     this.scene.add(this.stars);
 
-    // Configurar câmera
-    this.camera.position.z = 50;
+    // Configurar câmera com zoom maior
+    this.camera.position.z = 30; // Reduzido de 50 para 30
     this.camera.position.y = 0;
     this.camera.lookAt(0, 0, 0);
+
+    // Ajustar área do jogo para o novo zoom
+    this.gameArea = {
+      width: 60, // Reduzido de 100 para 60
+      height: 60  // Reduzido de 100 para 60
+    };
 
     // Criar jogador
     this.createPlayer();
@@ -468,26 +474,21 @@ class Game {
     const availableTypes = this.enemyTypes.filter(type => this.score >= type.pointsRequired);
     if (availableTypes.length === 0) return;
 
-    // Escolher um tipo aleatório dos disponíveis
-    const enemyType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+    // Determinar quantos inimigos criar (1 a 3)
+    const enemyCount = Math.floor(Math.random() * 3) + 1;
     
-    // Criar grupo de 2 inimigos do mesmo tipo
-    const screenWidth = window.innerWidth;
-    const gameWidth = this.gameArea.width;
-    const scale = gameWidth / screenWidth;
-    
-    // Calcular posições baseadas na largura da tela
-    const leftPosition = -gameWidth/4;
-    const rightPosition = gameWidth/4;
-    
-    for (let i = 0; i < 2; i++) {
+    // Criar inimigos
+    for (let i = 0; i < enemyCount; i++) {
+      // Escolher um tipo aleatório dos disponíveis
+      const enemyType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
       const enemyShip = enemyType.createGeometry();
       
-      // Posicionar os inimigos em diferentes alturas
+      // Posicionar o inimigo aleatoriamente na largura da tela
+      const xPosition = (Math.random() - 0.5) * this.gameArea.width;
       const heightOffset = (Math.random() - 0.5) * 5;
       
       enemyShip.position.set(
-        i === 0 ? leftPosition : rightPosition,
+        xPosition,
         20 + heightOffset,
         0
       );
@@ -877,8 +878,8 @@ class Game {
   startEnemySpawn() {
     setInterval(() => {
       if (this.gameState === "playing") {
-        // 70% de chance de criar um grupo de inimigos
-        if (Math.random() < 0.7) {
+        // 80% de chance de criar um grupo de inimigos
+        if (Math.random() < 0.8) {
           this.createEnemyGroup();
         }
       }
