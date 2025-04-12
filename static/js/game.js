@@ -475,15 +475,29 @@ class Game {
   }
 
   createEnemyBomb(x, y, color) {
-    const bombGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+    const bombGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1, 8);
     const bombMaterial = new THREE.MeshPhongMaterial({ 
       color: color,
       emissive: color,
       emissiveIntensity: 0.5
     });
     const bomb = new THREE.Mesh(bombGeometry, bombMaterial);
+    bomb.rotation.x = Math.PI / 2; // Rotacionar para ficar na vertical
     bomb.position.set(x, y, 0);
     bomb.velocity = new THREE.Vector3(0, -0.05, 0);
+
+    // Adicionar rastro
+    const trailGeometry = new THREE.CylinderGeometry(0.1, 0.3, 2, 8);
+    const trailMaterial = new THREE.MeshPhongMaterial({
+      color: color,
+      transparent: true,
+      opacity: 0.5
+    });
+    const trail = new THREE.Mesh(trailGeometry, trailMaterial);
+    trail.rotation.x = Math.PI / 2;
+    trail.position.set(0, 1, 0);
+    bomb.add(trail);
+
     this.scene.add(bomb);
     this.enemyBombs.push(bomb);
     this.playSound(this.sounds.enemyShoot, 0.3);
@@ -708,6 +722,7 @@ class Game {
           document.getElementById("score").textContent = Math.floor(this.score);
           this.power += 5;
           this.updatePowerDisplay();
+          this.playSound(this.sounds.shoot, 0.2); // Adicionar som de tiro ao acertar inimigo
           break;
         }
       }
@@ -758,6 +773,9 @@ class Game {
   gameOver() {
     this.gameState = "gameOver";
     this.stopAllSounds(); // Parar todos os sons ao finalizar o jogo
+    
+    // Salvar pontuação no ranking
+    gameOver(Math.floor(this.score));
     
     // Criar tela de game over
     const gameOverDiv = document.createElement('div');
