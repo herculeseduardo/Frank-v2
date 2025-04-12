@@ -40,6 +40,23 @@
     <script src="./static/js/game.js"></script>
     <script src="./static/js/ranking.js"></script>
     <script>
+      // Carregar o último nickname salvo
+      document.addEventListener('DOMContentLoaded', () => {
+        const nicknameInput = document.getElementById('nickname-input');
+        const lastNickname = localStorage.getItem('lastNickname');
+        if (lastNickname) {
+          nicknameInput.value = lastNickname;
+        }
+
+        // Salvar o nickname quando o usuário começar o jogo
+        document.getElementById('start-button').addEventListener('click', () => {
+          const nickname = nicknameInput.value.trim();
+          if (nickname) {
+            localStorage.setItem('lastNickname', nickname);
+          }
+        });
+      });
+
       // Adicionar evento para o botão de jogar novamente
       document.getElementById('play-again').addEventListener('click', () => {
         window.location.reload();
