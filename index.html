@@ -229,6 +229,41 @@
         transform: translateY(-2px);
         box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
       }
+      .ranking-buttons {
+        display: flex;
+        gap: 30px;
+        justify-content: center;
+        margin-top: 20px;
+      }
+      #close-ranking, #play-again {
+        min-width: 280px;
+        padding: 15px 30px;
+        font-size: 20px;
+        color: white;
+        border: none;
+        border-radius: 25px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        font-weight: bold;
+        letter-spacing: 2px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        text-align: center;
+      }
+      #close-ranking {
+        background: #4CAF50;
+      }
+      #close-ranking:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
+      }
+      #play-again {
+        background: #2196F3;
+      }
+      #play-again:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
+      }
     </style>
   </head>
   <body>
@@ -255,13 +290,22 @@
         <h2>Hall da Fama</h2>
         <div id="ranking-items"></div>
       </div>
-      <button id="close-ranking">Fechar</button>
+      <div class="ranking-buttons">
+        <button id="close-ranking">FECHAR</button>
+        <button id="play-again">JOGAR NOVAMENTE</button>
+      </div>
     </div>
 
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="./static/js/game.js"></script>
     <script src="./static/js/ranking.js"></script>
+    <script>
+      // Adicionar evento para o botão de jogar novamente
+      document.getElementById('play-again').addEventListener('click', () => {
+        window.location.reload();
+      });
+    </script>
   </body>
 </html>
 

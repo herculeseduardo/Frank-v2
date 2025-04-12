@@ -840,39 +840,8 @@ class Game {
     // Salvar pontuação no ranking
     gameOver(Math.floor(this.score));
     
-    // Criar tela de game over
-    const gameOverDiv = document.createElement('div');
-    gameOverDiv.style.position = 'absolute';
-    gameOverDiv.style.top = '50%';
-    gameOverDiv.style.left = '50%';
-    gameOverDiv.style.transform = 'translate(-50%, -50%)';
-    gameOverDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-    gameOverDiv.style.padding = '20px';
-    gameOverDiv.style.borderRadius = '10px';
-    gameOverDiv.style.textAlign = 'center';
-    gameOverDiv.style.color = 'white';
-    gameOverDiv.style.fontFamily = 'Arial, sans-serif';
-    gameOverDiv.style.zIndex = '1000';
-
-    gameOverDiv.innerHTML = `
-      <h1 style="color: #ff0000; margin-top: 0;">Game Over</h1>
-      <p style="font-size: 24px;">Sua pontuação: ${Math.floor(this.score)}</p>
-      <button style="
-        background-color: #4CAF50;
-        border: none;
-        color: white;
-        padding: 15px 32px;
-        text-align: center;
-        text-decoration: none;
-        display: inline-block;
-        font-size: 16px;
-        margin: 4px 2px;
-        cursor: pointer;
-        border-radius: 5px;
-      " onclick="window.location.reload()">Jogar Novamente</button>
-    `;
-
-    document.body.appendChild(gameOverDiv);
+    // Mostrar o hall da fama diretamente
+    rankingSystem.showRanking();
   }
 
   startEnemySpawn() {
