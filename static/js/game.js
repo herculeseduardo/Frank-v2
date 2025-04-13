@@ -90,17 +90,9 @@ class Game {
     ];
 
     // Inicializar sistema de áudio
-    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    this.sounds = {
-      explosion: null,
-      enemyExplosion: null,
-      bombExplosion: null,
-      shoot: null,
-      enemyShoot: null,
-      engine: null
-    };
+    this.audioSystem = Frank.audio.createAudioContext();
+    this.sounds = this.audioSystem.sounds;
     this.activeSounds = []; // Array para controlar sons ativos
-    this.loadSounds();
 
     // Remover sistema de dificuldade progressiva
     this.enemyTypes = [
@@ -228,75 +220,14 @@ class Game {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(this.renderer.domElement);
 
-    // Criar elementos de UI
-    const scoreElement = document.createElement('div');
-    scoreElement.id = 'score';
-    scoreElement.style.position = 'absolute';
-    scoreElement.style.top = '20px';
-    scoreElement.style.left = '50%';
-    scoreElement.style.transform = 'translateX(-50%)';
-    scoreElement.style.color = 'white';
-    scoreElement.style.fontSize = '24px';
-    scoreElement.style.textShadow = '2px 2px 4px rgba(0,0,0,0.5)';
-    scoreElement.style.zIndex = '100';
-    document.body.appendChild(scoreElement);
+    // Usar o utilitário de UI do Frank para criar a interface do jogo
+    this.ui = Frank.ui.createGameUI();
 
-    const powerContainer = document.createElement('div');
-    powerContainer.id = 'power-container';
-    powerContainer.style.position = 'absolute';
-    powerContainer.style.top = '60px';
-    powerContainer.style.left = '50%';
-    powerContainer.style.transform = 'translateX(-50%)';
-    powerContainer.style.width = '200px';
-    powerContainer.style.height = '20px';
-    powerContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-    powerContainer.style.borderRadius = '10px';
-    powerContainer.style.overflow = 'hidden';
-    powerContainer.style.zIndex = '100';
-    document.body.appendChild(powerContainer);
-
-    const powerBar = document.createElement('div');
-    powerBar.id = 'power-bar';
-    powerBar.style.width = '0%';
-    powerBar.style.height = '100%';
-    powerBar.style.backgroundColor = '#ff0000';
-    powerBar.style.transition = 'width 0.3s';
-    powerContainer.appendChild(powerBar);
-
-    const atomicText = document.createElement('div');
-    atomicText.id = 'atomic-text';
-    atomicText.style.position = 'absolute';
-    atomicText.style.top = '90px';
-    atomicText.style.left = '50%';
-    atomicText.style.transform = 'translateX(-50%)';
-    atomicText.style.color = 'white';
-    atomicText.style.fontSize = '18px';
-    atomicText.style.textShadow = '2px 2px 4px rgba(0,0,0,0.5)';
-    atomicText.style.zIndex = '100';
-    atomicText.style.opacity = '0';
-    atomicText.style.transition = 'opacity 0.5s';
-    atomicText.textContent = 'Atomic Bomb';
-    document.body.appendChild(atomicText);
-
-    // Adicionar fundo estelar
-    const starGeometry = new THREE.BufferGeometry();
-    const starMaterial = new THREE.PointsMaterial({
-      color: 0xFFFFFF,
-      size: 0.1,
-      transparent: true
+    // Adicionar fundo estelar usando o utilitário de geometria do Frank
+    this.stars = Frank.geometry.createStarfield(this.scene, {
+      count: 10000,
+      depth: 2000
     });
-
-    const starVertices = [];
-    for (let i = 0; i < 10000; i++) {
-      const x = (Math.random() - 0.5) * 2000;
-      const y = (Math.random() - 0.5) * 2000;
-      const z = (Math.random() - 0.5) * 2000;
-      starVertices.push(x, y, z);
-    }
-
-    starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
-    this.stars = new THREE.Points(starGeometry, starMaterial);
-    this.scene.add(this.stars);
 
     // Configurar câmera com zoom menor
     this.camera.position.z = 80;
@@ -309,7 +240,7 @@ class Game {
       height: 150
     };
 
-    // Criar jogador
+    // Criar jogador usando utilitários do Frank
     this.createPlayer();
 
     // Configurar controles
@@ -329,50 +260,12 @@ class Game {
   }
 
   createPlayer() {
-    // Criar grupo para a nave
-    const ship = new THREE.Group();
-
-    // Corpo principal da nave
-    const bodyGeometry = new THREE.ConeGeometry(1, 3, 4);
-    const bodyMaterial = new THREE.MeshPhongMaterial({ 
+    // Usar o utilitário de geometria do Frank para criar a nave do jogador
+    this.player = Frank.geometry.createPlayerShip(this.scene, {
       color: 0x4169E1, // Azul Royal
-      shininess: 100,
-      specular: 0xffffff
+      position: { x: 0, y: -15, z: 0 },
+      scale: 1
     });
-    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-    body.rotation.x = Math.PI / 2;
-    ship.add(body);
-
-    // Asas da nave
-    const wingGeometry = new THREE.BoxGeometry(3, 0.2, 1);
-    const wingMaterial = new THREE.MeshPhongMaterial({ 
-      color: 0x4169E1,
-      shininess: 100,
-      specular: 0xffffff
-    });
-    
-    const leftWing = new THREE.Mesh(wingGeometry, wingMaterial);
-    leftWing.position.set(-1.5, 0, 0);
-    ship.add(leftWing);
-
-    const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
-    rightWing.position.set(1.5, 0, 0);
-    ship.add(rightWing);
-
-    // Motor da nave
-    const engineGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.5, 8);
-    const engineMaterial = new THREE.MeshPhongMaterial({ 
-      color: 0x00ffff,
-      emissive: 0x00ffff,
-      emissiveIntensity: 0.5
-    });
-    const engine = new THREE.Mesh(engineGeometry, engineMaterial);
-    engine.position.set(0, -1.5, 0);
-    ship.add(engine);
-
-    this.player = ship;
-    this.player.position.set(0, -15, 0);
-    this.scene.add(this.player);
   }
 
   setupLighting() {
@@ -449,118 +342,22 @@ class Game {
   }
 
   loadSounds() {
-    // Carregar sons
-    const loadSound = async (url) => {
-      const response = await fetch(url);
-      const arrayBuffer = await response.arrayBuffer();
-      const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
-      return audioBuffer;
-    };
-
-    // Criar sons básicos programaticamente
-    this.createEngineSound();
-    this.createExplosionSound();
-    this.createShootSound();
-    this.createEnemyShootSound();
-  }
-
-  createEngineSound() {
-    const oscillator = this.audioContext.createOscillator();
-    const gainNode = this.audioContext.createGain();
-    
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(200, this.audioContext.currentTime);
-    gainNode.gain.setValueAtTime(0.05, this.audioContext.currentTime);
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(this.audioContext.destination);
-    
-    oscillator.start();
-    this.sounds.engine = { oscillator, gainNode };
-  }
-
-  createExplosionSound() {
-    const bufferSize = this.audioContext.sampleRate * 0.2;
-    const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
-    const data = buffer.getChannelData(0);
-
-    for (let i = 0; i < bufferSize; i++) {
-      const t = i / bufferSize;
-      const envelope = Math.exp(-t * 5);
-      data[i] = Math.sin(i * 0.1) * envelope * 0.8;
-    }
-
-    this.sounds.explosion = buffer;
-  }
-
-  createShootSound() {
-    const bufferSize = this.audioContext.sampleRate * 0.1;
-    const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
-    const data = buffer.getChannelData(0);
-
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = Math.sin(i * 0.1) * 0.5;
-    }
-
-    this.sounds.shoot = buffer;
-  }
-
-  createEnemyShootSound() {
-    const bufferSize = this.audioContext.sampleRate * 0.2;
-    const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
-    const data = buffer.getChannelData(0);
-
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = Math.sin(i * 0.05) * 0.3;
-    }
-
-    this.sounds.enemyShoot = buffer;
-  }
-
-  createEnemyExplosionSound() {
-    const bufferSize = this.audioContext.sampleRate * 0.3;
-    const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
-    const data = buffer.getChannelData(0);
-
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = Math.sin(i * 0.1) * Math.random() * 0.5;
-    }
-
-    this.sounds.enemyExplosion = buffer;
-  }
-
-  createBombExplosionSound() {
-    const bufferSize = this.audioContext.sampleRate * 0.2;
-    const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
-    const data = buffer.getChannelData(0);
-
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = Math.sin(i * 0.05) * Math.random() * 0.3;
-    }
-
-    this.sounds.bombExplosion = buffer;
+    // Esta função pode ser simplificada usando o Frank.js
+    // Os sons já foram criados pelo audioSystem
   }
 
   playSound(soundBuffer, volume = 1) {
     if (this.gameState !== "playing") return;
-
-    const source = this.audioContext.createBufferSource();
-    const gainNode = this.audioContext.createGain();
     
-    source.buffer = soundBuffer;
-    gainNode.gain.value = volume * 2; // Dobrando o volume
-    
-    source.connect(gainNode);
-    gainNode.connect(this.audioContext.destination);
-    
-    source.start(0);
+    // Usar o sistema de áudio do Frank
+    const soundInfo = this.audioSystem.playSound(soundBuffer, volume * 2);
     
     // Adicionar à lista de sons ativos
-    this.activeSounds.push({ source, gainNode });
+    this.activeSounds.push(soundInfo);
     
     // Remover da lista quando terminar
-    source.onended = () => {
-      const index = this.activeSounds.findIndex(s => s.source === source);
+    soundInfo.source.onended = () => {
+      const index = this.activeSounds.findIndex(s => s.source === soundInfo.source);
       if (index !== -1) {
         this.activeSounds.splice(index, 1);
       }
@@ -590,82 +387,56 @@ class Game {
     // Determinar quantos inimigos criar (1 a 3)
     const enemyCount = Math.floor(Math.random() * 3) + 1;
     
-    // Criar inimigos
+    // Criar inimigos usando utilitários do Frank
     for (let i = 0; i < enemyCount; i++) {
       // Escolher um tipo aleatório dos disponíveis
       const enemyType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
-      const enemyShip = enemyType.createGeometry();
+      let enemyTypeStr = 'fighter'; // tipo padrão
+      
+      // Mapear o tipo de inimigo do jogo para o tipo de inimigo do Frank
+      switch(enemyType.name) {
+        case 'Caça': enemyTypeStr = 'fighter'; break;
+        case 'Bombardeiro': enemyTypeStr = 'bomber'; break;
+        case 'Interceptor': enemyTypeStr = 'interceptor'; break;
+        case 'Nave Mãe': enemyTypeStr = 'mothership'; break;
+      }
       
       // Posicionar o inimigo aleatoriamente na largura da tela
       const xPosition = (Math.random() - 0.5) * this.gameArea.width;
       const heightOffset = (Math.random() - 0.5) * 5;
       
-      enemyShip.position.set(
-        xPosition,
-        40 + heightOffset, // Aumentado de 20 para 40
-        0
-      );
+      // Criar o inimigo usando o Frank.js
+      const enemyShip = Frank.geometry.createEnemyShip(this.scene, enemyTypeStr, {
+        color: enemyType.color,
+        position: {
+          x: xPosition,
+          y: 40 + heightOffset,
+          z: 0
+        }
+      });
 
+      // Adicionar propriedades necessárias para a lógica do jogo
       enemyShip.enemyType = enemyType;
       enemyShip.health = enemyType.health;
       enemyShip.lastBombTime = 0;
       enemyShip.bombInterval = 3000 + Math.random() * 2000;
       enemyShip.speed = enemyType.speed;
 
-      this.scene.add(enemyShip);
       this.enemies.push(enemyShip);
     }
   }
 
   createEnemyBomb(x, y, color) {
-    // Criar a bomba
-    const bombGeometry = new THREE.CylinderGeometry(0.5, 0.5, 1.5, 8); // Aumentado o tamanho
-    const bombMaterial = new THREE.MeshPhongMaterial({ 
-      color: color, // Usando a cor do inimigo
-      emissive: color,
-      emissiveIntensity: 0.8, // Aumentado o brilho
-      shininess: 100
+    // Criar a bomba usando o utilitário de projéteis do Frank
+    const bomb = Frank.geometry.createProjectile(this.scene, 'explosive', {
+      color: color,
+      position: { x: x, y: y, z: 0 },
+      velocity: { x: 0, y: -0.08, z: 0 }
     });
-    const bomb = new THREE.Mesh(bombGeometry, bombMaterial);
-    bomb.rotation.x = Math.PI / 2;
-    bomb.position.set(x, y, 0);
-    bomb.velocity = new THREE.Vector3(0, -0.08, 0); // Reduzida a velocidade de queda
+    
     bomb.lifetime = 200; // Aumentado o tempo de vida da bomba
-
-    // Criar rastro de fogo
-    const fireTrail = new THREE.Group();
-    const particleCount = 20; // Aumentado número de partículas
-    const particleGeometry = new THREE.SphereGeometry(0.2, 8, 8); // Aumentado tamanho das partículas
-    
-    for (let i = 0; i < particleCount; i++) {
-      const particleMaterial = new THREE.MeshPhongMaterial({
-        color: 0xff6600,
-        emissive: 0xff3300,
-        emissiveIntensity: 1.0, // Aumentado o brilho
-        transparent: true,
-        opacity: 0.9
-      });
-      
-      const particle = new THREE.Mesh(particleGeometry, particleMaterial);
-      const angle = (i / particleCount) * Math.PI * 2;
-      const radius = 0.3 + Math.random() * 0.4; // Aumentado o raio
-      particle.position.set(
-        Math.cos(angle) * radius,
-        -0.5 - (i * 0.2),
-        Math.sin(angle) * radius
-      );
-      particle.velocity = new THREE.Vector3(
-        (Math.random() - 0.5) * 0.03,
-        -0.05,
-        (Math.random() - 0.5) * 0.03
-      );
-      fireTrail.add(particle);
-    }
-    
-    bomb.add(fireTrail);
-    this.scene.add(bomb);
     this.enemyBombs.push(bomb);
-    this.playSound(this.sounds.enemyShoot, 0.4); // Aumentado o volume do som
+    this.playSound(this.sounds.enemyShoot, 0.4);
   }
 
   createBullet() {
@@ -677,30 +448,15 @@ class Game {
   }
 
   createExplosion(x, y, color = 0xff0000, type = 'enemy') {
-    const explosion = new THREE.Group();
-    const particleCount = 20;
-    const particleGeometry = new THREE.SphereGeometry(0.2, 8, 8);
-    const particleMaterial = new THREE.MeshPhongMaterial({
+    // Usar o utilitário do Frank para criar explosões
+    const explosion = Frank.geometry.createExplosion(this.scene, {
       color: color,
-      emissive: color,
-      emissiveIntensity: 0.5
+      position: { x: x, y: y, z: 0 },
+      particleCount: 20,
+      lifetime: 30,
+      scale: 1
     });
 
-    for (let i = 0; i < particleCount; i++) {
-      const particle = new THREE.Mesh(particleGeometry, particleMaterial);
-      const angle = (i / particleCount) * Math.PI * 2;
-      const speed = 0.1 + Math.random() * 0.2;
-      particle.velocity = new THREE.Vector3(
-        Math.cos(angle) * speed,
-        Math.sin(angle) * speed,
-        0
-      );
-      particle.position.set(x, y, 0);
-      explosion.add(particle);
-    }
-
-    explosion.lifetime = 30;
-    this.scene.add(explosion);
     this.explosions.push(explosion);
 
     // Tocar som apropriado para o tipo de explosão
@@ -740,15 +496,8 @@ class Game {
     if (this.controls.up) this.player.position.y += this.settings.playerSpeed;
     if (this.controls.down) this.player.position.y -= this.settings.playerSpeed;
 
-    // Limitar movimento dentro da nova área do jogo
-    this.player.position.x = Math.max(
-      -this.gameArea.width/2,
-      Math.min(this.gameArea.width/2, this.player.position.x)
-    );
-    this.player.position.y = Math.max(
-      -this.gameArea.height/2,
-      Math.min(this.gameArea.height/2, this.player.position.y)
-    );
+    // Usar o utilitário do Frank para limitar o movimento
+    Frank.physics.constrainToGameArea(this.player, this.gameArea);
 
     if (this.controls.shoot) {
       this.createBullet();
@@ -900,19 +649,8 @@ class Game {
   }
 
   updatePowerDisplay() {
-    const powerBar = document.getElementById('power-bar');
-    const atomicText = document.getElementById('atomic-text');
-    if (powerBar && atomicText) {
-      const powerPercentage = (this.power / this.maxPower) * 100;
-      powerBar.style.width = `${powerPercentage}%`;
-      
-      // Mostrar o texto gradualmente conforme o poder aumenta
-      if (powerPercentage > 0) {
-        atomicText.style.opacity = (powerPercentage / 100).toString();
-      } else {
-        atomicText.style.opacity = '0';
-      }
-    }
+    // Usar o método do Frank para atualizar a barra de poder
+    this.ui.updatePowerBar(this.power, this.maxPower);
   }
 
   checkCollisions() {
@@ -921,7 +659,8 @@ class Game {
       const bullet = this.bullets[i];
       for (let j = this.enemies.length - 1; j >= 0; j--) {
         const enemy = this.enemies[j];
-        if (bullet.position.distanceTo(enemy.position) < 2) {
+        // Usar o utilitário do Frank para verificar colisões
+        if (Frank.physics.checkCollision(bullet, enemy, 2)) {
           enemy.health -= bullet.userData.damage;
           
           if (enemy.health <= 0) {
@@ -929,7 +668,7 @@ class Game {
             this.scene.remove(enemy);
             this.enemies.splice(j, 1);
             this.score += enemy.enemyType.scoreValue;
-            document.getElementById("score").textContent = Math.floor(this.score);
+            this.ui.updateScore(this.score);
             this.power += 5;
             this.updatePowerDisplay();
             this.playSound(this.sounds.explosion, 0.5);
@@ -952,14 +691,15 @@ class Game {
       const bullet = this.bullets[i];
       for (let j = this.enemyBombs.length - 1; j >= 0; j--) {
         const bomb = this.enemyBombs[j];
-        if (bullet.position.distanceTo(bomb.position) < 1.5) {
+        // Usar o utilitário do Frank para verificar colisões
+        if (Frank.physics.checkCollision(bullet, bomb, 1.5)) {
           this.createExplosion(bomb.position.x, bomb.position.y, bomb.material.color.getHex(), 'bomb');
           this.scene.remove(bullet);
           this.scene.remove(bomb);
           this.bullets.splice(i, 1);
           this.enemyBombs.splice(j, 1);
           this.score += 0.5;
-          document.getElementById("score").textContent = Math.floor(this.score);
+          this.ui.updateScore(this.score);
           this.power += 2;
           this.updatePowerDisplay();
           break;
@@ -969,7 +709,8 @@ class Game {
 
     // Colisão entre jogador e inimigos
     for (const enemy of this.enemies) {
-      if (this.player.position.distanceTo(enemy.position) < 2) {
+      // Usar o utilitário do Frank para verificar colisões
+      if (Frank.physics.checkCollision(this.player, enemy, 2)) {
         this.createExplosion(this.player.position.x, this.player.position.y, 0x00ff00, 'player');
         this.gameOver();
         break;
@@ -979,7 +720,8 @@ class Game {
     // Colisão entre jogador e bombas
     for (let i = this.enemyBombs.length - 1; i >= 0; i--) {
       const bomb = this.enemyBombs[i];
-      if (this.player.position.distanceTo(bomb.position) < 2) {
+      // Usar o utilitário do Frank para verificar colisões
+      if (Frank.physics.checkCollision(this.player, bomb, 2)) {
         this.createExplosion(this.player.position.x, this.player.position.y, 0x00ff00, 'player');
         this.scene.remove(bomb);
         this.enemyBombs.splice(i, 1);
@@ -1164,45 +906,45 @@ class Game {
   }
 
   createNormalBullet(position) {
-    const geometry = new THREE.SphereGeometry(0.5, 16, 16);
-    const material = new THREE.MeshPhongMaterial({ color: 0xffff00 });
-    const bullet = new THREE.Mesh(geometry, material);
-    bullet.position.copy(position);
-    bullet.position.y += 2;
-    bullet.userData = { type: 'normal', damage: 1 };
-    return bullet;
+    // Usar o utilitário do Frank para criar projéteis
+    return Frank.geometry.createProjectile(this.scene, 'normal', {
+      color: 0xffff00,
+      position: {
+        x: position.x,
+        y: position.y + 2,
+        z: position.z
+      },
+      damage: 1
+    });
   }
 
   createLaserBullet(position) {
-    const geometry = new THREE.CylinderGeometry(0.1, 0.1, 2, 8);
-    const material = new THREE.MeshPhongMaterial({ 
+    return Frank.geometry.createProjectile(this.scene, 'laser', {
       color: 0xff0000,
-      emissive: 0xff0000,
-      emissiveIntensity: 0.5
+      position: {
+        x: position.x,
+        y: position.y + 2,
+        z: position.z
+      },
+      damage: 2
     });
-    const bullet = new THREE.Mesh(geometry, material);
-    bullet.position.copy(position);
-    bullet.position.y += 2;
-    bullet.rotation.x = Math.PI / 2;
-    bullet.userData = { type: 'laser', damage: 2 };
-    return bullet;
   }
 
   createPlasmaBullet(position) {
-    const geometry = new THREE.SphereGeometry(0.7, 32, 32);
-    const material = new THREE.MeshPhongMaterial({ 
+    return Frank.geometry.createProjectile(this.scene, 'plasma', {
       color: 0x00ff00,
-      emissive: 0x00ff00,
-      emissiveIntensity: 0.5
+      position: {
+        x: position.x,
+        y: position.y + 2,
+        z: position.z
+      },
+      damage: 3
     });
-    const bullet = new THREE.Mesh(geometry, material);
-    bullet.position.copy(position);
-    bullet.position.y += 2;
-    bullet.userData = { type: 'plasma', damage: 3 };
-    return bullet;
   }
 
   createLightningBullet(position) {
+    // Para o lightning bullet vamos continuar usando a implementação existente
+    // já que o Frank.js não tem um tipo específico para isso
     const group = new THREE.Group();
     const geometry = new THREE.CylinderGeometry(0.1, 0.1, 1.5, 8);
     const material = new THREE.MeshPhongMaterial({ 
@@ -1225,17 +967,15 @@ class Game {
   }
 
   createExplosiveBullet(position) {
-    const geometry = new THREE.SphereGeometry(0.6, 32, 32);
-    const material = new THREE.MeshPhongMaterial({ 
+    return Frank.geometry.createProjectile(this.scene, 'explosive', {
       color: 0xff9900,
-      emissive: 0xff9900,
-      emissiveIntensity: 0.5
+      position: {
+        x: position.x,
+        y: position.y + 2,
+        z: position.z
+      },
+      damage: 4
     });
-    const bullet = new THREE.Mesh(geometry, material);
-    bullet.position.copy(position);
-    bullet.position.y += 2;
-    bullet.userData = { type: 'explosive', damage: 4 };
-    return bullet;
   }
 
   checkPowerStarCollision() {
