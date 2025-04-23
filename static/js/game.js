@@ -564,11 +564,14 @@ class Game {
       bomb.position.add(bomb.velocity);
       bomb.lifetime--;
 
-      // Atualizar partículas do fogo
-      bomb.children[0].children.forEach(particle => {
-        particle.position.add(particle.velocity);
-        particle.material.opacity = bomb.lifetime / 200; // Ajustado para o novo tempo de vida
-      });
+      // Verificar se a bomba tem sistema de partículas antes de tentar atualizar
+      if (bomb.children && bomb.children[0] && bomb.children[0].children) {
+        // Atualizar partículas do fogo, se existirem
+        bomb.children[0].children.forEach(particle => {
+          particle.position.add(particle.velocity);
+          particle.material.opacity = bomb.lifetime / 200; // Ajustado para o novo tempo de vida
+        });
+      }
 
       // Remover bombas fora da tela ou com tempo expirado
       if (bomb.position.y < -25 || bomb.lifetime <= 0) {
