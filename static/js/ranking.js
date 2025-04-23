@@ -136,6 +136,21 @@ class RankingSystem {
     }
 }
 
+// Função para iniciar o jogo quando o jogador clicar no botão
+function startGame() {
+  // Inicializa um novo jogo
+  const game = new Game();
+  game.init();
+  // Muda o estado do jogo para "playing"
+  game.gameState = "playing";
+  
+  // Remove a mensagem de pausa, se existir
+  const pauseMessage = document.getElementById('pause-message');
+  if (pauseMessage) {
+    pauseMessage.remove();
+  }
+}
+
 // Inicializar o sistema de ranking
 const rankingSystem = new RankingSystem();
 
@@ -143,4 +158,4 @@ const rankingSystem = new RankingSystem();
 function gameOver(score) {
     rankingSystem.updateScore(score);
     rankingSystem.saveScore();
-} 
+}
