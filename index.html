@@ -2,27 +2,42 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8">
-    <title>Frank - Jogo 3D</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Frank — Defesa Orbital</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="static/css/style.css">
   </head>
   <body>
     <div id="welcome-screen">
-      <h1>Bem-vindo ao Frank!</h1>
-      <input type="text" id="nickname-input" placeholder="Digite seu nickname" maxlength="15">
+      <p class="eyebrow">Defesa orbital // Setor 7</p>
+      <h1>FRANK</h1>
+      <p class="tagline">Pilote. Atire. Sobreviva.</p>
+      <input type="text" id="nickname-input" placeholder="Digite seu nickname" maxlength="15" autocomplete="off">
       <div class="button-container">
-        <button id="start-button" class="game-button">Começar Jogo</button>
-        <button id="show-ranking-button" class="game-button">Ver Ranking</button>
+        <button id="start-button" class="game-button">Começar jogo</button>
+        <button id="show-ranking-button" class="game-button">Ver ranking</button>
       </div>
     </div>
 
-    <div id="info">Pontuação: <span id="score">0</span></div>
-    <div id="power-container">
-      <div id="power-bar"></div>
+    <div id="hud">
+      <div class="hud-panel">
+        <span class="hud-label">Pontuação</span>
+        <span id="score" class="hud-value">0</span>
+      </div>
+      <div class="hud-panel" id="power-panel">
+        <span class="hud-label">Bomba nuclear</span>
+        <div id="power-container" data-state="low"><div id="power-bar"></div></div>
+        <span id="atomic-text">Abata inimigos para carregar</span>
+      </div>
     </div>
+
     <div id="instructions">
-      Use as setas para mover | Z para atirar | X para bomba nuclear
+      <span><kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd> mover</span>
+      <span><kbd>Z</kbd> atirar</span>
+      <span><kbd>X</kbd> bomba nuclear</span>
     </div>
-    <canvas id="canvas"></canvas>
 
     <div id="ranking-modal">
       <div id="ranking-list">
@@ -30,8 +45,8 @@
         <div id="ranking-items"></div>
       </div>
       <div class="ranking-buttons">
-        <button id="close-ranking">FECHAR</button>
-        <button id="play-again">JOGAR</button>
+        <button id="close-ranking">Fechar</button>
+        <button id="play-again">Jogar</button>
       </div>
     </div>
 
@@ -65,4 +80,3 @@
     </script>
   </body>
 </html>
-

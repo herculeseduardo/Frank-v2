@@ -7,7 +7,7 @@ class Game {
       0.1,
       1000
     );
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.player = null;
     this.enemies = [];
     this.bullets = [];
@@ -20,10 +20,16 @@ class Game {
     this.stars = null;
     this.difficultyLevel = 1;
     this.lastDifficultyIncrease = 0;
+    // Corredor de voo (estilo Star Fox): x/y limitam a nave, z é a profundidade
     this.gameArea = {
-      width: 150,
-      height: 150
+      width: 56,
+      height: 32,
+      depth: 320 // distância do horizonte onde os inimigos nascem
     };
+    this.lastShotTime = 0;
+    this.reticle = null;
+    this.ground = null;
+    this.groundOffset = 0;
     this.controls = {
       left: false,
       right: false,
@@ -32,9 +38,10 @@ class Game {
       shoot: false,
     };
     this.settings = {
-      playerSpeed: 0.2,
-      bulletSpeed: 0.5,
+      playerSpeed: 0.5,
+      bulletSpeed: 4,
       enemySpeed: 0.1,
+      shotCooldown: 180, // cadência do tiro contínuo (ms)
       spawnInterval: 2000,
       baseSpeed: 0.1, // Velocidade base
       speedIncrease: 0.01, // Incremento de velocidade
@@ -216,8 +223,10 @@ class Game {
   }
 
   init() {
-    // Configurar renderer
+    // Configurar renderer (fundo transparente para deixar a nebulosa CSS aparecer)
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setClearColor(0x000000, 0);
     document.body.appendChild(this.renderer.domElement);
 
     // Usar o utilitário de UI do Frank para criar a interface do jogo
@@ -229,19 +238,18 @@ class Game {
       depth: 2000
     });
 
-    // Configurar câmera com zoom menor
-    this.camera.position.z = 80;
-    this.camera.position.y = 0;
-    this.camera.lookAt(0, 0, 0);
-
-    // Ajustar área do jogo para o novo zoom
-    this.gameArea = {
-      width: 150,
-      height: 150
-    };
+    // Câmera atrás da nave (estilo Star Fox), olhando para o horizonte
+    this.camera.position.set(0, 6, 20);
+    this.camera.lookAt(0, 0, -80);
 
     // Criar jogador usando utilitários do Frank
     this.createPlayer();
+
+    // Retícula de mira à frente da nave
+    this.createReticle();
+
+    // Chão em grade estilo synthwave
+    this.createSynthwaveGround();
 
     // Configurar controles
     this.setupControls();
@@ -263,18 +271,119 @@ class Game {
     // Usar o utilitário de geometria do Frank para criar a nave do jogador
     this.player = Frank.geometry.createPlayerShip(this.scene, {
       color: 0x4169E1, // Azul Royal
-      position: { x: 0, y: -15, z: 0 },
+      position: { x: 0, y: 0, z: 0 },
       scale: 1
     });
+    // Virar o nariz da nave para dentro da tela (direção -z)
+    this.player.rotation.y = Math.PI;
+  }
+
+  createReticle() {
+    this.reticle = new THREE.Group();
+
+    const makeMaterial = () => new THREE.MeshBasicMaterial({
+      color: 0x6ef3ff,
+      transparent: true,
+      opacity: 0.9,
+      side: THREE.DoubleSide,
+      depthTest: false
+    });
+
+    // Anel próximo
+    const nearRing = new THREE.Mesh(new THREE.RingGeometry(1.1, 1.3, 32), makeMaterial());
+    nearRing.position.z = -20;
+    nearRing.renderOrder = 999;
+    this.reticle.add(nearRing);
+
+    // Anel distante (menor, marca a linha de tiro no fundo)
+    const farRing = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.75, 32), makeMaterial());
+    farRing.position.z = -60;
+    farRing.renderOrder = 999;
+    this.reticle.add(farRing);
+
+    // Ponto central
+    const dot = new THREE.Mesh(new THREE.CircleGeometry(0.12, 12), makeMaterial());
+    dot.position.z = -60;
+    dot.renderOrder = 999;
+    this.reticle.add(dot);
+
+    this.scene.add(this.reticle);
+  }
+
+  updateReticle() {
+    if (!this.reticle) return;
+
+    // A retícula acompanha a nave, projetada à frente na linha de tiro
+    this.reticle.position.copy(this.player.position);
+
+    // Trava de mira: magenta quando há inimigo alinhado com a linha de tiro
+    let locked = false;
+    for (const enemy of this.enemies) {
+      const dx = enemy.position.x - this.player.position.x;
+      const dy = enemy.position.y - this.player.position.y;
+      if (enemy.position.z < this.player.position.z && Math.sqrt(dx * dx + dy * dy) < 3.5) {
+        locked = true;
+        break;
+      }
+    }
+
+    const color = locked ? 0xff3d81 : 0x6ef3ff;
+    this.reticle.children.forEach(part => part.material.color.setHex(color));
+
+    const pulse = locked ? 1 + Math.sin(Date.now() * 0.02) * 0.1 : 1;
+    this.reticle.scale.set(pulse, pulse, 1);
+  }
+
+  createSynthwaveGround() {
+    this.ground = new THREE.Group();
+
+    const size = 800;
+    const divisions = 40;
+    this.groundCell = size / divisions;
+
+    // Grade magenta estilo synthwave
+    const grid = new THREE.GridHelper(size, divisions, 0xff3d81, 0xff3d81);
+    grid.material.transparent = true;
+    grid.material.opacity = 0.35;
+    this.ground.add(grid);
+
+    // Plano escuro por baixo da grade para dar corpo ao chão
+    const plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(size, size),
+      new THREE.MeshBasicMaterial({ color: 0x0a0a24, transparent: true, opacity: 0.75 })
+    );
+    plane.rotation.x = -Math.PI / 2;
+    plane.position.y = -0.3;
+    this.ground.add(plane);
+
+    this.ground.position.set(0, -18, -200);
+    this.scene.add(this.ground);
+  }
+
+  updateGround() {
+    if (!this.ground) return;
+
+    // Rolagem contínua em direção à câmera (sensação de velocidade)
+    this.groundOffset += 0.9 + (this.settings.baseSpeed - 0.1) * 4;
+    this.ground.position.z = -200 + (this.groundOffset % this.groundCell);
   }
 
   setupLighting() {
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
     this.scene.add(ambientLight);
 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
     directionalLight.position.set(0, 1, 1);
     this.scene.add(directionalLight);
+
+    // Luzes de contorno neon (ciano por baixo, magenta por cima)
+    const cyanLight = new THREE.PointLight(0x6ef3ff, 0.7, 250);
+    cyanLight.position.set(0, -40, 40);
+    this.scene.add(cyanLight);
+
+    const magentaLight = new THREE.PointLight(0xff3d81, 0.5, 300);
+    magentaLight.position.set(0, 60, 30);
+    this.scene.add(magentaLight);
   }
 
   setupControls() {
@@ -401,17 +510,18 @@ class Game {
         case 'Nave Mãe': enemyTypeStr = 'mothership'; break;
       }
       
-      // Posicionar o inimigo aleatoriamente na largura da tela
+      // Nascer sempre no horizonte (fundo do corredor), nunca no meio da tela
       const xPosition = (Math.random() - 0.5) * this.gameArea.width;
-      const heightOffset = (Math.random() - 0.5) * 5;
-      
+      const yPosition = (Math.random() - 0.3) * this.gameArea.height * 0.6;
+      const zPosition = -this.gameArea.depth + (Math.random() - 0.5) * 60;
+
       // Criar o inimigo usando o Frank.js
       const enemyShip = Frank.geometry.createEnemyShip(this.scene, enemyTypeStr, {
         color: enemyType.color,
         position: {
           x: xPosition,
-          y: 40 + heightOffset,
-          z: 0
+          y: yPosition,
+          z: zPosition
         }
       });
 
@@ -419,22 +529,28 @@ class Game {
       enemyShip.enemyType = enemyType;
       enemyShip.health = enemyType.health;
       enemyShip.lastBombTime = 0;
-      enemyShip.bombInterval = 3000 + Math.random() * 2000;
+      enemyShip.bombInterval = 4000 + Math.random() * 3000;
       enemyShip.speed = enemyType.speed;
 
       this.enemies.push(enemyShip);
     }
   }
 
-  createEnemyBomb(x, y, color) {
-    // Criar a bomba usando o utilitário de projéteis do Frank
+  createEnemyBomb(enemy) {
+    // Mirar a bomba na posição atual do jogador
+    // (mais lenta que os inimigos para dar tempo de desviar)
+    const direction = this.player.position.clone()
+      .sub(enemy.position)
+      .normalize()
+      .multiplyScalar(0.55 + this.settings.baseSpeed);
+
     const bomb = Frank.geometry.createProjectile(this.scene, 'explosive', {
-      color: color,
-      position: { x: x, y: y, z: 0 },
-      velocity: { x: 0, y: -0.08, z: 0 }
+      color: enemy.enemyType.bombColor,
+      position: { x: enemy.position.x, y: enemy.position.y, z: enemy.position.z },
+      velocity: { x: direction.x, y: direction.y, z: direction.z }
     });
-    
-    bomb.lifetime = 200; // Aumentado o tempo de vida da bomba
+
+    bomb.lifetime = 400;
     this.enemyBombs.push(bomb);
     this.playSound(this.sounds.enemyShoot, 0.4);
   }
@@ -496,22 +612,32 @@ class Game {
     if (this.controls.up) this.player.position.y += this.settings.playerSpeed;
     if (this.controls.down) this.player.position.y -= this.settings.playerSpeed;
 
+    // Inclinar a nave ao manobrar (rolagem lateral e arfagem)
+    const targetRoll = (this.controls.left ? -0.55 : 0) + (this.controls.right ? 0.55 : 0);
+    const targetPitch = (this.controls.up ? -0.3 : 0) + (this.controls.down ? 0.3 : 0);
+    this.player.rotation.z += (targetRoll - this.player.rotation.z) * 0.15;
+    this.player.rotation.x += (targetPitch - this.player.rotation.x) * 0.15;
+
     // Usar o utilitário do Frank para limitar o movimento
     Frank.physics.constrainToGameArea(this.player, this.gameArea);
 
+    // Tiro contínuo: segurar Z dispara com cadência fixa
     if (this.controls.shoot) {
-      this.createBullet();
-      this.controls.shoot = false;
+      const now = Date.now();
+      if (now - this.lastShotTime >= this.settings.shotCooldown) {
+        this.createBullet();
+        this.lastShotTime = now;
+      }
     }
   }
 
   updateBullets() {
     for (let i = this.bullets.length - 1; i >= 0; i--) {
       const bullet = this.bullets[i];
-      bullet.position.y += this.settings.bulletSpeed;
+      bullet.position.z -= this.settings.bulletSpeed;
 
-      // Remover balas fora da tela
-      if (bullet.position.y > this.gameArea.height/2) {
+      // Remover balas que passaram do horizonte
+      if (bullet.position.z < -this.gameArea.depth - 50) {
         this.scene.remove(bullet);
         this.bullets.splice(i, 1);
       }
@@ -519,39 +645,50 @@ class Game {
   }
 
   updateEnemies() {
+    // Fator de dificuldade progressiva (cresce junto com baseSpeed)
+    const speedFactor = 6 * (this.settings.baseSpeed / 0.1);
+
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const enemy = this.enemies[i];
-      
-      // Aumentar velocidade de queda base
-      enemy.position.y -= enemy.speed * 1.5; // 50% mais rápido
-      
-      // Adicionar movimento diagonal para alguns inimigos
+
+      // Avançar na profundidade em direção ao jogador
+      enemy.position.z += enemy.speed * speedFactor;
+
+      // Adicionar deslocamento lateral para alguns inimigos
       if (!enemy.hasDiagonalMovement) {
-        // 30% de chance de ter movimento diagonal
+        // 30% de chance de ter deslocamento lateral
         if (Math.random() < 0.3) {
           enemy.hasDiagonalMovement = true;
           enemy.direction = Math.random() < 0.5 ? 1 : -1; // Direção aleatória
-          enemy.diagonalSpeed = enemy.speed * 0.8; // Velocidade diagonal
+          enemy.diagonalSpeed = enemy.speed * 0.8; // Velocidade lateral
         }
       }
-      
-      // Aplicar movimento diagonal se o inimigo tiver
+
+      // Balanço 3D suave para dar vida às naves inimigas
+      if (enemy.wobblePhase === undefined) {
+        enemy.wobblePhase = Math.random() * Math.PI * 2;
+      }
+      enemy.rotation.y = Math.sin(Date.now() * 0.002 + enemy.wobblePhase) * 0.25;
+
+      // Aplicar deslocamento lateral se o inimigo tiver
       if (enemy.hasDiagonalMovement) {
         enemy.position.x += enemy.diagonalSpeed * enemy.direction;
-        
-        // Inverter direção se atingir os limites da tela
+
+        // Inverter direção se atingir os limites do corredor
         if (enemy.position.x > this.gameArea.width/2 || enemy.position.x < -this.gameArea.width/2) {
           enemy.direction *= -1;
         }
       }
 
+      // Só atirar quando já estiver visível/próximo (evita bombas vindas do nada)
       const currentTime = Date.now();
-      if (currentTime - enemy.lastBombTime > enemy.bombInterval) {
-        this.createEnemyBomb(enemy.position.x, enemy.position.y, enemy.enemyType.bombColor);
+      if (enemy.position.z > -260 && currentTime - enemy.lastBombTime > enemy.bombInterval) {
+        this.createEnemyBomb(enemy);
         enemy.lastBombTime = currentTime;
       }
 
-      if (enemy.position.y < -this.gameArea.height/2) {
+      // Remover inimigos que passaram pela câmera
+      if (enemy.position.z > 30) {
         this.scene.remove(enemy);
         this.enemies.splice(i, 1);
       }
@@ -569,12 +706,12 @@ class Game {
         // Atualizar partículas do fogo, se existirem
         bomb.children[0].children.forEach(particle => {
           particle.position.add(particle.velocity);
-          particle.material.opacity = bomb.lifetime / 200; // Ajustado para o novo tempo de vida
+          particle.material.opacity = bomb.lifetime / 400; // Ajustado para o novo tempo de vida
         });
       }
 
-      // Remover bombas fora da tela ou com tempo expirado
-      if (bomb.position.y < -25 || bomb.lifetime <= 0) {
+      // Remover bombas que passaram pela câmera ou com tempo expirado
+      if (bomb.position.z > 30 || bomb.lifetime <= 0) {
         this.scene.remove(bomb);
         this.enemyBombs.splice(i, 1);
       }
@@ -583,12 +720,6 @@ class Game {
 
   createAtomicBomb() {
     if (this.power >= this.maxPower) {
-      // Resetar a opacidade do texto
-      const atomicText = document.getElementById('atomic-text');
-      if (atomicText) {
-        atomicText.style.opacity = '0';
-      }
-
       // Criar explosão atômica
       const atomicExplosion = new THREE.Group();
       const particleCount = 100;
@@ -642,7 +773,7 @@ class Game {
 
       // Adicionar pontuação total
       this.score += totalScore;
-      document.getElementById("score").textContent = Math.floor(this.score);
+      this.ui.updateScore(this.score);
 
       // Resetar o poder
       this.power = 0;
@@ -662,8 +793,9 @@ class Game {
       const bullet = this.bullets[i];
       for (let j = this.enemies.length - 1; j >= 0; j--) {
         const enemy = this.enemies[j];
-        // Usar o utilitário do Frank para verificar colisões
-        if (Frank.physics.checkCollision(bullet, enemy, 2)) {
+        // Colisão em corredor: alinhou lateralmente com o inimigo = acertou
+        // (tolerância de profundidade maior compensa a velocidade dos tiros)
+        if (Frank.physics.checkCorridorCollision(bullet, enemy, 3.5, 6)) {
           enemy.health -= bullet.userData.damage;
           
           if (enemy.health <= 0) {
@@ -694,8 +826,8 @@ class Game {
       const bullet = this.bullets[i];
       for (let j = this.enemyBombs.length - 1; j >= 0; j--) {
         const bomb = this.enemyBombs[j];
-        // Usar o utilitário do Frank para verificar colisões
-        if (Frank.physics.checkCollision(bullet, bomb, 1.5)) {
+        // Colisão em corredor também para as bombas inimigas
+        if (Frank.physics.checkCorridorCollision(bullet, bomb, 2.2, 5)) {
           this.createExplosion(bomb.position.x, bomb.position.y, bomb.material.color.getHex(), 'bomb');
           this.scene.remove(bullet);
           this.scene.remove(bomb);
@@ -713,7 +845,7 @@ class Game {
     // Colisão entre jogador e inimigos
     for (const enemy of this.enemies) {
       // Usar o utilitário do Frank para verificar colisões
-      if (Frank.physics.checkCollision(this.player, enemy, 2)) {
+      if (Frank.physics.checkCollision(this.player, enemy, 3)) {
         this.createExplosion(this.player.position.x, this.player.position.y, 0x00ff00, 'player');
         this.gameOver();
         break;
@@ -724,7 +856,7 @@ class Game {
     for (let i = this.enemyBombs.length - 1; i >= 0; i--) {
       const bomb = this.enemyBombs[i];
       // Usar o utilitário do Frank para verificar colisões
-      if (Frank.physics.checkCollision(this.player, bomb, 2)) {
+      if (Frank.physics.checkCollision(this.player, bomb, 2.5)) {
         this.createExplosion(this.player.position.x, this.player.position.y, 0x00ff00, 'player');
         this.scene.remove(bomb);
         this.enemyBombs.splice(i, 1);
@@ -759,24 +891,18 @@ class Game {
   startSpeedIncrease() {
     setInterval(() => {
       if (this.gameState === "playing") {
-        // Aumentar a velocidade base
+        // Aumentar a velocidade base (updateEnemies e createEnemyBomb usam baseSpeed)
         this.settings.baseSpeed += this.settings.speedIncrease;
-        
+
         // Aplicar o aumento de velocidade para todos os elementos
-        this.settings.enemySpeed = this.settings.baseSpeed;
-        this.settings.bulletSpeed = this.settings.baseSpeed * 5;
-        this.settings.playerSpeed = this.settings.baseSpeed * 2;
-        
-        // Aumentar velocidade das bombas inimigas
-        for (const bomb of this.enemyBombs) {
-          bomb.velocity.y = -0.08 - (this.settings.baseSpeed * 0.5);
-        }
-        
+        this.settings.bulletSpeed = 4 + (this.settings.baseSpeed - 0.1) * 10;
+        this.settings.playerSpeed = 0.5 + (this.settings.baseSpeed - 0.1) * 2;
+
         // Aumentar velocidade da estrela de poder
         if (this.powerStar) {
-          this.powerStar.userData.speed = 0.1 + (this.settings.baseSpeed * 0.5);
+          this.powerStar.userData.speed = 0.8 + (this.settings.baseSpeed - 0.1) * 2;
         }
-        
+
         // Aumentar velocidade de spawn dos inimigos
         this.settings.spawnInterval = Math.max(500, 2000 - (this.settings.baseSpeed * 1000));
       }
@@ -793,6 +919,17 @@ class Game {
       this.updatePowerStar();
       this.checkCollisions();
       this.checkPowerStarCollision();
+      this.updateReticle();
+      this.updateGround();
+
+      // Câmera segue a nave suavemente (estilo Star Fox)
+      this.camera.position.x += (this.player.position.x * 0.6 - this.camera.position.x) * 0.08;
+      this.camera.position.y += (6 + this.player.position.y * 0.6 - this.camera.position.y) * 0.08;
+      this.camera.lookAt(
+        this.player.position.x * 0.4,
+        this.player.position.y * 0.4,
+        -80
+      );
 
       // Animar as estrelas
       if (this.stars) {
@@ -803,15 +940,8 @@ class Game {
       if (!document.getElementById('pause-message')) {
         const pauseMessage = document.createElement('div');
         pauseMessage.id = 'pause-message';
-        pauseMessage.style.position = 'absolute';
-        pauseMessage.style.top = '50%';
-        pauseMessage.style.left = '50%';
-        pauseMessage.style.transform = 'translate(-50%, -50%)';
-        pauseMessage.style.color = 'white';
-        pauseMessage.style.fontSize = '24px';
-        pauseMessage.style.textAlign = 'center';
-        pauseMessage.style.zIndex = '1000';
-        pauseMessage.innerHTML = 'Pressione ESPAÇO para começar';
+        pauseMessage.className = 'game-message';
+        pauseMessage.textContent = 'Pressione espaço para começar';
         document.body.appendChild(pauseMessage);
       }
     }
@@ -832,18 +962,18 @@ class Game {
     });
 
     const star = new THREE.Mesh(geometry, material);
-    
-    // Posicionar a estrela aleatoriamente na parte superior da tela
+
+    // Posicionar a estrela aleatoriamente no horizonte do corredor
     star.position.set(
       (Math.random() - 0.5) * this.gameArea.width,
-      this.gameArea.height/2,
-      0
+      (Math.random() - 0.5) * this.gameArea.height * 0.6,
+      -this.gameArea.depth
     );
 
     // Adicionar efeito de pulsação
     star.userData.pulseSpeed = 0.05;
     star.userData.pulseScale = 1;
-    star.userData.speed = 0.1; // Velocidade de queda
+    star.userData.speed = 0.8; // Velocidade de aproximação
     star.userData.trail = []; // Array para armazenar o rastro
 
     this.powerStar = star;
@@ -883,8 +1013,8 @@ class Game {
       this.powerStar.userData.pulseScale
     );
 
-    // Movimento para baixo
-    this.powerStar.position.y -= this.powerStar.userData.speed;
+    // Aproximação na profundidade
+    this.powerStar.position.z += this.powerStar.userData.speed;
 
     // Atualizar rastro
     this.powerStar.userData.trail.push(this.powerStar.position.clone());
@@ -901,21 +1031,21 @@ class Game {
     }
     this.powerStar.userData.trailObject.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
-    // Remover estrela se sair da tela
-    if (this.powerStar.position.y < -this.gameArea.height/2) {
+    // Remover estrela se passar pela câmera
+    if (this.powerStar.position.z > 30) {
       this.scene.remove(this.powerStar);
       this.powerStar = null;
     }
   }
 
   createNormalBullet(position) {
-    // Usar o utilitário do Frank para criar projéteis
+    // Usar o utilitário do Frank para criar projéteis (à frente do nariz da nave)
     return Frank.geometry.createProjectile(this.scene, 'normal', {
       color: 0xffff00,
       position: {
         x: position.x,
-        y: position.y + 2,
-        z: position.z
+        y: position.y,
+        z: position.z - 3
       },
       damage: 1
     });
@@ -926,8 +1056,8 @@ class Game {
       color: 0xff0000,
       position: {
         x: position.x,
-        y: position.y + 2,
-        z: position.z
+        y: position.y,
+        z: position.z - 3
       },
       damage: 2
     });
@@ -938,8 +1068,8 @@ class Game {
       color: 0x00ff00,
       position: {
         x: position.x,
-        y: position.y + 2,
-        z: position.z
+        y: position.y,
+        z: position.z - 3
       },
       damage: 3
     });
@@ -964,7 +1094,7 @@ class Game {
     }
     
     group.position.copy(position);
-    group.position.y += 2;
+    group.position.z -= 3;
     group.userData = { type: 'lightning', damage: 2 };
     return group;
   }
@@ -974,8 +1104,8 @@ class Game {
       color: 0xff9900,
       position: {
         x: position.x,
-        y: position.y + 2,
-        z: position.z
+        y: position.y,
+        z: position.z - 3
       },
       damage: 4
     });
@@ -984,7 +1114,7 @@ class Game {
   checkPowerStarCollision() {
     if (!this.powerStar) return;
 
-    if (this.player.position.distanceTo(this.powerStar.position) < 2) {
+    if (this.player.position.distanceTo(this.powerStar.position) < 3) {
       // Colisão detectada
       this.scene.remove(this.powerStar);
       this.powerStar = null;
@@ -994,14 +1124,7 @@ class Game {
       
       // Mostrar mensagem de power-up
       const message = document.createElement('div');
-      message.style.position = 'absolute';
-      message.style.top = '50%';
-      message.style.left = '50%';
-      message.style.transform = 'translate(-50%, -50%)';
-      message.style.color = 'white';
-      message.style.fontSize = '24px';
-      message.style.textAlign = 'center';
-      message.style.zIndex = '1000';
+      message.className = 'game-toast';
       message.textContent = `Power-up: ${this.bulletTypes[this.currentBulletType].name}`;
       document.body.appendChild(message);
       
@@ -1012,8 +1135,5 @@ class Game {
   }
 }
 
-// Inicializar o jogo quando a página carregar
-window.addEventListener("load", () => {
-  const game = new Game();
-  game.init();
-});
+// O jogo é inicializado pela função startGame() (ranking.js)
+// quando o jogador clica em "Começar jogo" — evita instâncias duplicadas.

@@ -471,6 +471,24 @@ const Frank = {
       const distance = obj1.position.distanceTo(obj2.position);
       return distance < threshold;
     },
+
+    /**
+     * Verifica colisão em corredor (visão de profundidade estilo Star Fox):
+     * tolerância lateral (x/y) separada da tolerância de profundidade (z),
+     * o que torna a mira mais justa para projéteis rápidos
+     * @param {THREE.Object3D} obj1 - Primeiro objeto
+     * @param {THREE.Object3D} obj2 - Segundo objeto
+     * @param {Number} lateralThreshold - Distância máxima no plano x/y
+     * @param {Number} depthThreshold - Distância máxima no eixo z
+     * @returns {Boolean} Se há colisão
+     */
+    checkCorridorCollision: function(obj1, obj2, lateralThreshold = 3, depthThreshold = 6) {
+      if (!obj1 || !obj2) return false;
+      const dx = obj1.position.x - obj2.position.x;
+      const dy = obj1.position.y - obj2.position.y;
+      const dz = obj1.position.z - obj2.position.z;
+      return Math.sqrt(dx * dx + dy * dy) < lateralThreshold && Math.abs(dz) < depthThreshold;
+    },
     
     /**
      * Verifica se um objeto está dentro dos limites da área de jogo
@@ -513,59 +531,23 @@ const Frank = {
      * @returns {Object} Objeto com referências aos elementos criados
      */
     createGameUI: function() {
-      // Elemento de pontuação
-      const scoreElement = document.createElement('div');
-      scoreElement.id = 'score';
-      scoreElement.style.position = 'absolute';
-      scoreElement.style.top = '20px';
-      scoreElement.style.left = '50%';
-      scoreElement.style.transform = 'translateX(-50%)';
-      scoreElement.style.color = 'white';
-      scoreElement.style.fontSize = '24px';
-      scoreElement.style.textShadow = '2px 2px 4px rgba(0,0,0,0.5)';
-      scoreElement.style.zIndex = '100';
-      document.body.appendChild(scoreElement);
+      // Reutilizar os elementos do HUD definidos no index.html;
+      // criar apenas se não existirem (a aparência fica por conta do CSS)
+      const getOrCreate = function(id, parent) {
+        let el = document.getElementById(id);
+        if (!el) {
+          el = document.createElement('div');
+          el.id = id;
+          (parent || document.body).appendChild(el);
+        }
+        return el;
+      };
 
-      // Container da barra de poder
-      const powerContainer = document.createElement('div');
-      powerContainer.id = 'power-container';
-      powerContainer.style.position = 'absolute';
-      powerContainer.style.top = '60px';
-      powerContainer.style.left = '50%';
-      powerContainer.style.transform = 'translateX(-50%)';
-      powerContainer.style.width = '200px';
-      powerContainer.style.height = '20px';
-      powerContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-      powerContainer.style.borderRadius = '10px';
-      powerContainer.style.overflow = 'hidden';
-      powerContainer.style.zIndex = '100';
-      document.body.appendChild(powerContainer);
+      const scoreElement = getOrCreate('score');
+      const powerContainer = getOrCreate('power-container');
+      const powerBar = getOrCreate('power-bar', powerContainer);
+      const atomicText = getOrCreate('atomic-text');
 
-      // Barra de poder
-      const powerBar = document.createElement('div');
-      powerBar.id = 'power-bar';
-      powerBar.style.width = '0%';
-      powerBar.style.height = '100%';
-      powerBar.style.backgroundColor = '#ff0000';
-      powerBar.style.transition = 'width 0.3s';
-      powerContainer.appendChild(powerBar);
-
-      // Texto para bomba atômica
-      const atomicText = document.createElement('div');
-      atomicText.id = 'atomic-text';
-      atomicText.style.position = 'absolute';
-      atomicText.style.top = '90px';
-      atomicText.style.left = '50%';
-      atomicText.style.transform = 'translateX(-50%)';
-      atomicText.style.color = 'white';
-      atomicText.style.fontSize = '18px';
-      atomicText.style.textShadow = '2px 2px 4px rgba(0,0,0,0.5)';
-      atomicText.style.zIndex = '100';
-      atomicText.style.opacity = '0';
-      atomicText.style.transition = 'opacity 0.5s';
-      atomicText.textContent = 'Atomic Bomb';
-      document.body.appendChild(atomicText);
-      
       return {
         score: scoreElement,
         powerContainer: powerContainer,
@@ -578,13 +560,17 @@ const Frank = {
          * @param {Number} maxPower - Valor máximo do poder
          */
         updatePowerBar: function(power, maxPower) {
-          const powerPercentage = (power / maxPower) * 100;
+          const powerPercentage = Math.max(0, Math.min(100, (power / maxPower) * 100));
           powerBar.style.width = `${powerPercentage}%`;
-          
-          if (powerPercentage > 0) {
-            atomicText.style.opacity = (powerPercentage / 100).toString();
+
+          if (powerPercentage >= 100) {
+            powerContainer.dataset.state = 'ready';
+            atomicText.textContent = 'Pronta — pressione X';
           } else {
-            atomicText.style.opacity = '0';
+            powerContainer.dataset.state = powerPercentage >= 60 ? 'mid' : 'low';
+            atomicText.textContent = powerPercentage > 0
+              ? `Carregando ${Math.floor(powerPercentage)}%`
+              : 'Abata inimigos para carregar';
           }
         },
         
