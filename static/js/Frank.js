@@ -245,13 +245,55 @@ const Frank = {
         case 'explosive':
           projectile = new THREE.Mesh(
             new THREE.SphereGeometry(0.6, 32, 32),
-            new THREE.MeshPhongMaterial({ 
+            new THREE.MeshPhongMaterial({
               color: config.color || 0xff9900,
               emissive: config.color || 0xff9900,
               emissiveIntensity: 0.5
             })
           );
           projectile.userData = { type: 'explosive', damage: config.damage || 4 };
+          break;
+
+        case 'mine':
+          // Mina espinhosa: núcleo escuro facetado + espinhos brilhantes,
+          // silhueta distinta de esferas/explosões da cena
+          const mineColor = config.color || 0xff9900;
+          projectile = new THREE.Mesh(
+            new THREE.IcosahedronGeometry(0.55, 0),
+            new THREE.MeshPhongMaterial({
+              color: 0x1a1a1a,
+              emissive: mineColor,
+              emissiveIntensity: 0.25,
+              flatShading: true,
+              shininess: 30
+            })
+          );
+
+          const spikeMaterial = new THREE.MeshPhongMaterial({
+            color: mineColor,
+            emissive: mineColor,
+            emissiveIntensity: 1
+          });
+          const spikeGeometry = new THREE.ConeGeometry(0.14, 0.55, 6);
+          const spikeDirections = [
+            [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1],
+            [1, 1, 1], [-1, 1, -1], [1, -1, -1], [-1, -1, 1]
+          ];
+          const up = new THREE.Vector3(0, 1, 0);
+          for (const d of spikeDirections) {
+            const dir = new THREE.Vector3(d[0], d[1], d[2]).normalize();
+            const spike = new THREE.Mesh(spikeGeometry, spikeMaterial);
+            spike.position.copy(dir).multiplyScalar(0.7);
+            spike.quaternion.setFromUnitVectors(up, dir);
+            projectile.add(spike);
+          }
+
+          projectile.userData = {
+            type: 'mine',
+            damage: config.damage || 4,
+            color: mineColor,
+            blinkMaterial: spikeMaterial
+          };
           break;
       }
       

@@ -544,7 +544,7 @@ class Game {
       .normalize()
       .multiplyScalar(0.55 + this.settings.baseSpeed);
 
-    const bomb = Frank.geometry.createProjectile(this.scene, 'explosive', {
+    const bomb = Frank.geometry.createProjectile(this.scene, 'mine', {
       color: enemy.enemyType.bombColor,
       position: { x: enemy.position.x, y: enemy.position.y, z: enemy.position.z },
       velocity: { x: direction.x, y: direction.y, z: direction.z }
@@ -680,9 +680,11 @@ class Game {
         }
       }
 
-      // Só atirar quando já estiver visível/próximo (evita bombas vindas do nada)
+      // Só atirar quando visível/próximo e ainda à frente do jogador
+      // (evita bombas vindas do nada ou pelas costas)
       const currentTime = Date.now();
-      if (enemy.position.z > -260 && currentTime - enemy.lastBombTime > enemy.bombInterval) {
+      const isInFront = enemy.position.z < this.player.position.z - 20;
+      if (enemy.position.z > -260 && isInFront && currentTime - enemy.lastBombTime > enemy.bombInterval) {
         this.createEnemyBomb(enemy);
         enemy.lastBombTime = currentTime;
       }
@@ -701,13 +703,11 @@ class Game {
       bomb.position.add(bomb.velocity);
       bomb.lifetime--;
 
-      // Verificar se a bomba tem sistema de partículas antes de tentar atualizar
-      if (bomb.children && bomb.children[0] && bomb.children[0].children) {
-        // Atualizar partículas do fogo, se existirem
-        bomb.children[0].children.forEach(particle => {
-          particle.position.add(particle.velocity);
-          particle.material.opacity = bomb.lifetime / 400; // Ajustado para o novo tempo de vida
-        });
+      // Girar a mina e pulsar o brilho dos espinhos para destacá-la na tela
+      bomb.rotation.x += 0.05;
+      bomb.rotation.y += 0.08;
+      if (bomb.userData.blinkMaterial) {
+        bomb.userData.blinkMaterial.emissiveIntensity = 0.6 + 0.4 * Math.sin(bomb.lifetime * 0.3);
       }
 
       // Remover bombas que passaram pela câmera ou com tempo expirado
@@ -765,7 +765,7 @@ class Game {
       // Destruir todas as bombas inimigas e pontuar
       for (let i = this.enemyBombs.length - 1; i >= 0; i--) {
         const bomb = this.enemyBombs[i];
-        this.createExplosion(bomb.position.x, bomb.position.y, bomb.material.color.getHex(), 'bomb');
+        this.createExplosion(bomb.position.x, bomb.position.y, bomb.userData.color || 0xff9900, 'bomb');
         this.scene.remove(bomb);
         this.enemyBombs.splice(i, 1);
         totalScore += 1; // 1 ponto por bomba
@@ -828,7 +828,7 @@ class Game {
         const bomb = this.enemyBombs[j];
         // Colisão em corredor também para as bombas inimigas
         if (Frank.physics.checkCorridorCollision(bullet, bomb, 2.2, 5)) {
-          this.createExplosion(bomb.position.x, bomb.position.y, bomb.material.color.getHex(), 'bomb');
+          this.createExplosion(bomb.position.x, bomb.position.y, bomb.userData.color || 0xff9900, 'bomb');
           this.scene.remove(bullet);
           this.scene.remove(bomb);
           this.bullets.splice(i, 1);
